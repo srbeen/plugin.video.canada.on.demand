@@ -16,18 +16,33 @@ __date__ = '03-09-2011'
 __version__ = '0.0.1'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
+
+
 class OnDemandPlugin(object):
     
     def get_url(self,urldata):
+        """
+        Constructs a URL back into the plugin with the specified arguments.
+        
+        """
         return "%s?%s" % (self.script_url, urllib.urlencode(urldata,1))
 
     def channel_list(self):
+        """
+        List all registered Channels
+
+        Channels are automatically registered simply by being imported 
+        and being subclasses of BaseChannel.
         
+        """
         for channel_code, channel_class in ChannelMetaClass.registry.channels.iteritems():
             info = channel_class.get_channel_entry_info()
             logging.debug("CHANNEL INFO: %s" %(info,))
+
+            # Default to <short_name>.png if no icon is set.
             if info['Thumb'] is None:
                 info['Thumb'] = info['channel'] + ".png"
+
             try:
                 info['Thumb'] = self.get_resource_path('images', info['Thumb'])
             except ChannelException:
@@ -37,19 +52,49 @@ class OnDemandPlugin(object):
         self.end_list()
         
     def set_stream_url(self, url, info=None):
+        """
+        Resolve a Stream URL and return it to XBMC. 
+        
+        'info' is used to construct the 'now playing' information
+        via add_list_item.
+        
+        """
         listitem = xbmcgui.ListItem(label='clip', path=url)
         xbmcplugin.setResolvedUrl(self.handle, True, listitem)
         
         
     def end_list(self):
+        
         xbmcplugin.endOfDirectory(self.handle, succeeded=True)
 
         
     def get_cache_dir(self):
+        """
+        return an acceptable cache directory.
+        
+        """
+        # I have no idea if this is right.
         return xbmc.translatePath('special://temp/')
     
+    
     def add_list_item(self, info, is_folder=True, return_only=False):
+        """
+        Creates an XBMC ListItem from the data contained in the info dict.
+        
+        if is_folder is True (The default) the item is a regular folder item
+        
+        if is_folder is False, the item will be considered playable by xbmc
+        and is expected to return a call to set_stream_url to begin playback.
 
+        if return_only is True, the item item isn't added to the xbmc screen but 
+        is returned instead.
+
+        Note: This function does some renaming of specific keys in the info dict.
+        you'll have to read the source to see what is expected of a listitem, but in 
+        general you want to pass in self.args + a new 'action' and a new 'remote_url'
+        'Title' is also required, anything *should* be optional
+        
+        """
         info.setdefault('Thumb', 'None')
         info.setdefault('Icon', info['Thumb'])
         if 'Rating' in info:
@@ -80,12 +125,24 @@ class OnDemandPlugin(object):
         return li
         
     def get_resource_path(self, *path):
+        """
+        Returns a full path to a plugin resource.
+        
+        eg. self.get_resource_path("images", "some_image.png")
+        
+        """
         p = os.path.join(__settings__.getAddonInfo('path'), 'resources', *path)
         if os.path.exists(p):
             return p
         raise ChannelException("Couldn't Find Resource: %s" % (p, ))
+
     
     def __call__(self):
+        """
+        This is the main entry point of the plugin.
+        the querystring has already been parsed into self.args
+        
+        """
         
         action = self.args.get('action', None)
         
@@ -93,24 +150,25 @@ class OnDemandPlugin(object):
             return self.channel_list()
         
         
+        # If there is an action, then there should also be a channel
         channel_code = self.args.get('channel', None)
-        logging.debug("Action: %s, Channel: %s" % (action, channel_code))
+
+        # The meta class has a registry of all concrete Channel subclasses
+        # so we look up the appropriate one here.
+        
         channel_class = ChannelMetaClass.registry.channels[channel_code]
         chan = channel_class(self, **self.args)
+        
         return chan()
     
         
     def __init__(self, script_url, handle, querystring):
         
-        logging.debug("Constructing Plugin with args: %s, %s, %s" % (script_url, handle, querystring))
-        
         self.script_url = script_url
         self.handle = int(handle)
         if len(querystring) > 2:
-            logging.debug("Parsing Querystring %s" % (querystring,))
             self.querystring = querystring[1:]
             items = urldecode(self.querystring)
-            logging.debug("Parse QS Args: %s" % (items,))            
             self.args = dict(items)
             
         else:
@@ -120,6 +178,5 @@ class OnDemandPlugin(object):
         logging.debug("Constructed Plugin %s" % (self.__dict__,))
         
 if __name__ == '__main__':
-    logging.info("Plugin Called With %s" % (sys.argv,))
     plugin = OnDemandPlugin(*sys.argv)
     plugin()
