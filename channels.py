@@ -82,7 +82,7 @@ class CBCBaseChannel(BaseChannel):
             clip_url = base_url + ref['src']
 
             if qs:
-                clip_url = "?" + qs
+                clip_url += "?" + qs
             data = {}
             data.update(self.args)
             data['Title'] = self.args['Title'] + " clip %s" % (i+1,)
