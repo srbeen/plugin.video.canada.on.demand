@@ -35,7 +35,7 @@ class OnDemandPlugin(object):
         and being subclasses of BaseChannel.
         
         """
-        for channel_code, channel_class in ChannelMetaClass.registry.channels.iteritems():
+        for channel_code, channel_class in sorted(ChannelMetaClass.registry.channels.iteritems()):
             info = channel_class.get_channel_entry_info()
             logging.debug("CHANNEL INFO: %s" %(info,))
 

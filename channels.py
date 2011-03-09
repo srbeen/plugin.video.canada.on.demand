@@ -173,7 +173,13 @@ class CTVBaseChannel(BaseChannel):
             data.update(parse_bad_json(a['onclick'][45:-16]))
             data['channel'] = self.short_name
             data['action'] = 'play_clip'
-            data['Rating'] = 0.0
+            data['Rating'] = 0.0 # the data in level4 already contains a rating. 
+                                 # There was a crash which I THOUGHT was caused by 
+                                 # the rating being a string instead of a float and
+                                 # i'm not sure if it will crash or not if I remove it.
+                                 # I'm making the comment extra large to remind myself
+                                 # to check if its okay to remove.
+                                 
             data['playable'] = True
             yield data
 
@@ -374,7 +380,7 @@ class Discovery(CTVBaseChannel):
 
 
 class ComedyNetwork(CTVBaseChannel):
-    short_name = 'thecomedynetwork'
+    short_name = 'comedynetwork'
     base_url = 'http://watch.thecomedynetwork.ca/AJAX/'
     long_name = 'The Comedy Network'
     swf_url = 'http://watch.thecomedynetwork.ca/Flash/player.swf?themeURL=http://watch.thecomedynetwork.ca/themes/Comedy/player/theme.aspx'
