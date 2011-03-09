@@ -60,7 +60,7 @@ class CBCBaseChannel(BaseChannel):
         
         
         for i, vidtag in enumerate(soup.findAll('video')):
-            ref = vidtag.ref
+            ref = vidtag.ref            
             if ref is None:
                 ref = vidtag
             clip_url = base_url + ref['src']
