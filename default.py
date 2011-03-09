@@ -45,6 +45,9 @@ class OnDemandPlugin(object):
         xbmcplugin.endOfDirectory(self.handle, succeeded=True)
 
         
+    def get_cache_dir(self):
+        return xbmc.translatePath('special://temp/')
+    
     def add_list_item(self, info, is_folder=True, return_only=False):
 
         info.setdefault('Thumb', 'None')
