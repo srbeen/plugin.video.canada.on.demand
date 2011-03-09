@@ -1,4 +1,4 @@
-import csv
+import time
 import simplejson
 from channel import BaseChannel, ChannelException,ChannelMetaClass
 from utils import *
@@ -50,13 +50,23 @@ class CBCBaseChannel(BaseChannel):
     def action_browse_episode(self):
         url = "http://release.theplatform.com/content.select?format=SMIL&mbr=true&pid=%s" % (self.args['remote_PID'],)
         soup = get_soup(url)
+        logging.debug("SOUP: %s" % (soup,))
         base_url = decode_htmlentities(soup.meta['base'])
-        
-        base_url, qs = base_url.split("?",1)
+        try:
+            base_url, qs = base_url.split("?",1)
+        except ValueError:
+            base_url = base_url
+            qs = None
         
         
         for i, vidtag in enumerate(soup.findAll('video')):
-            clip_url = base_url + vidtag.ref['src'] + "?" + qs
+            ref = vidtag.ref
+            if ref is None:
+                ref = vidtag
+            clip_url = base_url + ref['src']
+            
+            if qs:
+                clip_url = "?" + qs
             data = {}
             data.update(self.args)
             data['Title'] = self.args['Title'] + " clip %s" % (i+1,)
@@ -218,14 +228,60 @@ class GlobalTV(CBCBaseChannel):
     base_url = 'http://feeds.theplatform.com/ps/JSON/PortalService/2.2/'
     root_url = None
     PID = 'W_qa_mi18Zxv8T8yFwmc8FIOolo_tp_g'
-    
+    category_cache_timeout = 60
     def get_root_url(self):
         return self.base_url + "getCategoryList?callback=jsonp1299681815422&field=ID&field=depth&field=hasReleases&field=fullTitle&PID=%s&query=CustomText|PlayerTag|z/Global%%20Video%%20Centre&field=title&field=fullTitle&customField=TileAd&customField=DisplayTitle" % (self.PID,)
 
-    def action_root(self):
+    def get_cached_categories(self):
+        fpath = os.path.join(self.plugin.get_cache_dir(), 'canada.on.demand.%s.categories.cache' % (self.short_name,))
+        try:
+            if os.path.exists(fpath):
+                data = simplejson.load(open(fpath))
+                if data['cached_at'] + self.category_cache_timeout >= time.time():
+                    logging.debug("Using Cached Categories")
+                    return data['categories']
+        except:
+            return None
+        return None
+
+    
+    def get_categories(self, parent_id=None):
         url = self.get_root_url()
-        categories = self.parse_callback(get_page(url).read())
-        logging.debug("Categories: %s" % (categories,))
+        categories = self.get_cached_categories()
+        if not categories:
+            categories = self.parse_callback(get_page(url).read())['items']
+            fpath = os.path.join(self.plugin.get_cache_dir(), 'canada.on.demand.%s.categories.cache' % (self.short_name,))
+            fh = open(fpath, 'w')
+            simplejson.dump({'cached_at': time.time(), 'categories': categories}, fh)
+            fh.close()
+
+        if parent_id is None:
+            categories = [c for c in categories if c['depth'] == 1]
+        else:
+            cat = [c for c in categories if c['ID'] == int(parent_id)][0]
+            categories = [c for c in categories if c['fullTitle'].startswith(cat['fullTitle'] + "/") and c['depth'] == cat['depth'] + 1]
+            
+        cats = []
+        for c in categories:
+            data = {}
+            data.update(self.args)
+            data.update({
+                'remote_url': c['ID'],
+                'Title': c['title'],
+                'action': 'browse',
+            })
+            cats.append(data)
+        
+        return cats
+    
+    
+                          
+        
+    def action_root(self):
+        categories = self.get_categories()
+        for cat in categories:
+            self.plugin.add_list_item(cat)
+        self.plugin.end_list()
         
         
 class CBC(CBCBaseChannel):
