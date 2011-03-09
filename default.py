@@ -28,7 +28,10 @@ class OnDemandPlugin(object):
             logging.debug("CHANNEL INFO: %s" %(info,))
             if info['Thumb'] is None:
                 info['Thumb'] = info['channel'] + ".png"
-            info['Thumb'] = self.get_resource_path('images', info['Thumb'])
+            try:
+                info['Thumb'] = self.get_resource_path('images', info['Thumb'])
+            except ChannelException:
+                logging.warn("Couldn't Find Channel Icon for %s" % (channel_code,))
             
             self.add_list_item(info)
         self.end_list()

@@ -59,6 +59,7 @@ class BaseChannel(object):
     icon_path = None
     description = None
     root_url = ''
+    swf_url = None
     is_abstract = True
     
     __metaclass__ = ChannelMetaClass
@@ -87,8 +88,11 @@ class BaseChannel(object):
     
     def get_url(self, url=None):
         if url is None:
-            url = self.root_url
+            url = self.get_root_url()
         return "%s%s" % (self.base_url, url)
+    
+    def get_root_url(self):
+        return self.root_url
     
     
     def __call__(self):

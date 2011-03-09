@@ -12,7 +12,13 @@ class CTVException(Exception):
     pass
 
 
-def transform_stream_url(url, swf_url):
+def transform_stream_url(url, swf_url=None):
+    logging.debug("ORIGINAL URL: %s"%(url,))
+    if swf_url:
+	swf_url = 'swfurl=%s' % (swfurl,)
+    else:
+	swf_url = ''
+	
     match = re.match(r"rtmpe?://(?P<netloc>[\w\d\.]+)/(?P<live_od>(?:\w+))/(?P<path>[^\?]+)(?:\?(?P<querystring>.*))?", url)
     parts = dict(match.groupdict())
     if "." in parts['path']:
@@ -31,9 +37,9 @@ def transform_stream_url(url, swf_url):
 	parts['q'] = ''
 
     if parts['extension'] == 'mp4':
-	res = "rtmpe://%(netloc)s/%(live_od)s?ovpfv=2.1.4%(amp)s%(querystring)s playpath=%(extension)s:%(path)s.%(extension)s swfurl=%(swfurl)s" % parts
+	res = "rtmpe://%(netloc)s/%(live_od)s?ovpfv=2.1.4%(amp)s%(querystring)s playpath=%(extension)s:%(path)s.%(extension)s %(swfurl)s" % parts
     else:
-	res = "rtmpe://%(netloc)s/%(live_od)s?ovpfv=2.1.4%(amp)s%(querystring)s playpath=%(path)s%(q)s%(querystring)s swfurl=%(swfurl)s" % parts		
+	res = "rtmpe://%(netloc)s/%(live_od)s?ovpfv=2.1.4%(amp)s%(querystring)s playpath=%(path)s%(q)s%(querystring)s %(swfurl)s" % parts		
     
     if parts['live_od'] == 'live':
 	res += " live=true"
