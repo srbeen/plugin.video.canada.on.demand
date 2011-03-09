@@ -15,7 +15,7 @@ class CTVException(Exception):
 def transform_stream_url(url, swf_url=None):
     logging.debug("ORIGINAL URL: %s"%(url,))
     if swf_url:
-	swf_url = 'swfurl=%s' % (swfurl,)
+	swf_url = 'swfurl=%s' % (swf_url,)
     else:
 	swf_url = ''
 	

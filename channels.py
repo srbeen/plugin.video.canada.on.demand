@@ -292,7 +292,11 @@ class ComedyNetwork(CTVBaseChannel):
     long_name = 'The Comedy Network'
     swf_url = 'http://watch.thecomedynetwork.ca/Flash/player.swf?themeURL=http://watch.thecomedynetwork.ca/themes/Comedy/player/theme.aspx'
         
-
+class Space(CTVBaseChannel):
+    short_name = 'space'
+    long_name = "Space" 
+    base_url = "http://watch.spacecast.com/AJAX/"
+    swf_url = "http://watch.spacecast.com/Flash/player.swf?themeURL=http://watch.spacecast.com/themes/Space/player/theme.aspx"
 
 class MuchMusic(CTVBaseChannel):
     short_name = 'muchmusic'
