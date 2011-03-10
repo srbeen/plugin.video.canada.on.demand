@@ -54,6 +54,11 @@ class ChannelException(Exception): pass
 
 
 class BaseChannel(object):
+    """
+    The Base of all Channel classes.
+
+    
+    """
     short_name = None
     long_name = None
     icon_path = None
@@ -71,6 +76,12 @@ class BaseChannel(object):
 
     @classmethod
     def get_channel_entry_info(self):
+        """
+        This method is responsible for returning the info 
+        used to generate the Channel listitem at the plugin's
+        root level.
+        
+        """
         return {
             'Title': self.long_name,
             'Thumb': self.icon_path,
