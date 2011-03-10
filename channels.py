@@ -268,7 +268,7 @@ class CanwestBaseChannel(CBCBaseChannel):
     base_url = 'http://feeds.theplatform.com/ps/JSON/PortalService/2.2/'
     root_url = None
     PID = None
-    playerTag = 'z/History%20Player%20-%20Video%20Center' #urlencode
+    playerTag = None
     category_cache_timeout = 60 * 5 # value is in seconds. so 5 minutes.
 
     def get_root_url(self):
@@ -298,7 +298,6 @@ class CanwestBaseChannel(CBCBaseChannel):
     def get_categories(self, parent_id=None):
         url = self.get_root_url()
         categories = self.get_cached_categories()
-        #refresh categories if... > 1hr old?
         if not categories:
             categories = self.parse_callback(get_page(url).read())['items']
             fpath = os.path.join(self.plugin.get_cache_dir(), 'canada.on.demand.%s.categories.cache' % (self.short_name,))
@@ -422,14 +421,59 @@ class GlobalTV(CanwestBaseChannel):
     long_name = 'Global TV'
     PID = 'W_qa_mi18Zxv8T8yFwmc8FIOolo_tp_g'
     playerTag = 'z/Global%20Video%20Centre' #urlencode
-    
-    
+    #swf_url = 'http://www.globaltv.com/video/swf/flvPlayer.swf'
+
 class HistoryTV(CanwestBaseChannel):
     short_name = 'history'
     long_name = 'History TV'
     PID = 'IX_AH1EK64oFyEbbwbGHX2Y_2A_ca8pk'
     playerTag = 'z/History%20Player%20-%20Video%20Center' #urlencode
-    
+    #swf_url = 'http://www.history.ca/video/cwp/swf/flvPlayer.swf'
+
+class FoodNetwork(CanwestBaseChannel):
+    short_name = 'foodnet'
+    long_name = 'The Food Network'
+    PID = '6yC6lGVHaVA8oWSm1F9PaIYc9tOTzDqY'
+    playerTag = 'z/FOODNET%20Player%20-%20Video%20Centre' #urlencode
+    #swf_url = 'http://webdata.globaltv.com/global/canwestPlayer/swf/4.1/flvPlayer.swf'
+
+class HGTV(CanwestBaseChannel):
+    short_name = 'hgtv'
+    long_name = 'HGTV.ca'
+    PID = 'HmHUZlCuIXO_ymAAPiwCpTCNZ3iIF1EG'
+    playerTag = 'z/HGTV%20Player%20-%20Video%20Center' #urlencode
+    #swf_url = 'http://www.hgtv.ca/includes/cwp/swf/flvPlayer.swf'
+
+"""
+class Showcase(CanwestBaseChannel):
+    #short_name = 'showcase'
+    #long_name = 'Showcase'
+    #PID = '6yC6lGVHaVA8oWSm1F9PaIYc9tOTzDqY'
+    #playerTag = 'z/FOODNET%20Player%20-%20Video%20Centre' #urlencode
+    #swf_url = 'http://webdata.globaltv.com/global/canwestPlayer/swf/4.1/flvPlayer.swf'
+"""
+
+class SliceTV(CanwestBaseChannel):
+    short_name = 'slice'
+    long_name = 'Slice TV'
+    PID = 'EJZUqE_dB8XeUUgiJBDE37WER48uEQCY'
+    playerTag = 'z/Slice%20Player%20-%20New%20Video%20Center' #urlencode
+    #swf_url = 'http://www.slice.ca/includes/cwp/swf/flvPlayer.swf'
+
+class TVTropolis(CanwestBaseChannel):
+    short_name = 'tvtropolis'
+    long_name = 'TVtropolis'
+    PID = '3i9zvO0c6HSlP7Fz848a0DvzBM0jUWcC'
+    playerTag = 'z/TVTropolis%20Player%20-%20Video%20Center' #urlencode
+    #swf_url = 'http://www.tvtropolis.com/swf/cwp/flvPlayer.swf'
+
+class diyNet(CanwestBaseChannel):
+    short_name = 'diynet'
+    long_name = 'The DIY Network'
+    PID = 'FgLJftQA35gBSx3kKPM46ZVvhP6JxTYt'
+    playerTag = 'z/DIY%20Network%20-%20Video%20Centre' #urlencode
+    #swf_url = 'http://www.diy.ca/Includes/cwp/swf/flvPlayer.swf'
+
     
 class CBC(CBCBaseChannel):
     short_name = 'cbc'
