@@ -75,8 +75,16 @@ class OnDemandPlugin(object):
         """
         # I have no idea if this is right.
         return xbmc.translatePath('special://temp/')
-    
-    
+
+
+    def get_setting(self, id):
+        """
+        return a user-modifyable plugin setting.
+        
+        """
+        return __settings__.getSetting(id)
+
+
     def add_list_item(self, info, is_folder=True, return_only=False):
         """
         Creates an XBMC ListItem from the data contained in the info dict.

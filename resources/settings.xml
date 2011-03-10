@@ -1,0 +1,3 @@
+<settings>
+   <setting id="show_empty_cat" type="bool" label="30000" default="false"/>
+</settings>

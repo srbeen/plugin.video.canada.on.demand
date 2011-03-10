@@ -305,11 +305,12 @@ class CanwestBaseChannel(CBCBaseChannel):
             simplejson.dump({'cached_at': time.time(), 'categories': categories}, fh)
             fh.close()
 
+           
         if parent_id is None:
-            categories = [c for c in categories if c['depth'] == 1 and (c['hasReleases'] or c['hasChildren'])]
+            categories = [c for c in categories if c['depth'] == 1 and ( self.plugin.get_setting('show_empty_cat') or ((c['hasReleases'] or c['hasChildren']))]
         else:
             cat = [c for c in categories if c['ID'] == int(parent_id)][0]
-            categories = [c for c in categories if c['fullTitle'].startswith(cat['fullTitle'] + "/") and c['depth'] == cat['depth'] + 1 and (c['hasReleases'] or c['hasChildren'])]
+            categories = [c for c in categories if c['fullTitle'].startswith(cat['fullTitle'] + "/") and c['depth'] == cat['depth'] + 1 and  ( self.plugin.get_setting('show_empty_cat') or (c['hasReleases'] or c['hasChildren']))]
 
         cats = []
         for c in categories:
