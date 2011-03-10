@@ -69,12 +69,14 @@ class CBCBaseChannel(BaseChannel):
         soup = get_soup(url)
         logging.debug("SOUP: %s" % (soup,))
         base_url = decode_htmlentities(soup.meta['base'])
+        
         try:
             base_url, qs = base_url.split("?",1)
         except ValueError:
             base_url = base_url
             qs = None
-
+            
+        logging.debug({'qs': qs, 'base_url': base_url})
 
         for i, vidtag in enumerate(soup.findAll('video')):
             ref = vidtag.ref
@@ -83,7 +85,7 @@ class CBCBaseChannel(BaseChannel):
             clip_url = base_url + ref['src']
 
             if qs:
-                clip_url = "?" + qs
+                clip_url += "?" + qs
 
             data = {}
             data.update(self.args)
@@ -305,26 +307,38 @@ class CanwestBaseChannel(CBCBaseChannel):
             simplejson.dump({'cached_at': time.time(), 'categories': categories}, fh)
             fh.close()
 
-           
+
         if parent_id is None:
-            categories = [c for c in categories if c['depth'] == 1 and ( self.plugin.get_setting('show_empty_cat') or ((c['hasReleases'] or c['hasChildren']))]
+            categories = [c for c in categories \
+                          if c['depth'] == 1 
+                          and (
+                              self.plugin.get_setting('show_empty_cat') 
+                              or (c['hasReleases'] or c['hasChildren'])
+                          )]
+
         else:
             cat = [c for c in categories if c['ID'] == int(parent_id)][0]
-            categories = [c for c in categories if c['fullTitle'].startswith(cat['fullTitle'] + "/") and c['depth'] == cat['depth'] + 1 and  ( self.plugin.get_setting('show_empty_cat') or (c['hasReleases'] or c['hasChildren']))]
+            categories = [c for c in categories \
+                          if c['fullTitle'].startswith(cat['fullTitle'] + "/") 
+                          and c['depth'] == cat['depth'] + 1 
+                          and (
+                              self.plugin.get_setting('show_empty_cat') 
+                              or (c['hasReleases'] or c['hasChildren'])
+                          )]
 
-        cats = []
-        for c in categories:
-            logging.debug(c)
-            data = {}
-            data.update(self.args)
-            data.update({
-                'remote_url': c['ID'],
-                'Thumb': c['thumbnailURL'],
-                'Title': c['title'],
-                'Plot': c['description'],
-                'action': 'browse',
-            })
-            cats.append(data)
+            cats = []
+            for c in categories:
+                logging.debug(c)
+                data = {}
+                data.update(self.args)
+                data.update({
+                    'remote_url': c['ID'],
+                    'Thumb': c['thumbnailURL'],
+                    'Title': c['title'],
+                    'Plot': c['description'],
+                    'action': 'browse',
+                })
+                cats.append(data)
         return cats
 
     def get_releases(self, category_id):
@@ -337,9 +351,9 @@ class CanwestBaseChannel(CBCBaseChannel):
         rels = []
         for item in data['items']:
             if item['bitrate'] != '':
-        	title = '%s (%d kbps)'%(item['title'],int(item['bitrate'])/1024)
+                title = '%s (%d kbps)'%(item['title'],int(item['bitrate'])/1024)
             else:
-        	title = item['title']
+                title = item['title']
             rels.append({
                 'Thumb': item['thumbnailURL'],
                 'Title': title,
@@ -383,21 +397,21 @@ class CanwestBaseChannel(CBCBaseChannel):
 
             if "?" in clip_url:
                 clip_url, qs = clip_url.split("?", 1)
-            
+
             if playpath:
                 clip_url += playpath
-            
+
             if qs:
                 clip_url += "?" + qs
-            
-                
+
+
             data = {}
             data.update(self.args)
             data['Title'] = self.args['Title']
             data['remote_url'] = clip_url
             data['action'] = 'play'
             self.plugin.add_list_item(data, is_folder=False)
-            
+
         self.plugin.end_list()
 
     def action_browse(self):
@@ -459,7 +473,7 @@ class Showcase(CanwestBaseChannel):
     PID = 'sx9rVurvXUY4nOXBoB2_AdD1BionOoPy'
     playerTag = 'z/Showcase%20Video%20Centre' #urlencode
     #swf_url = 'http://www.showcase.ca/video/swf/flvPlayer.swf'
-    
+
 
 class SliceTV(CanwestBaseChannel):
     short_name = 'slice'
@@ -482,7 +496,7 @@ class diyNet(CanwestBaseChannel):
     playerTag = 'z/DIY%20Network%20-%20Video%20Centre' #urlencode
     #swf_url = 'http://www.diy.ca/Includes/cwp/swf/flvPlayer.swf'
 
-    
+
 class CBC(CBCBaseChannel):
     short_name = 'cbc'
     long_name = 'CBC'
@@ -588,4 +602,3 @@ class BravoFact(CTVBaseChannel):
     short_name = 'bravofact'
     base_url = 'http://watch.bravofact.com/AJAX/'
     swf_url = 'http://watch.bravofact.com/Flash/player.swf?themeURL=http://watch.bravofact.com/themes/BravoFact/player/theme.aspx'
-

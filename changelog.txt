@@ -1,1 +1,4 @@
 0.0.3 - added A bunch of new channels.
+
+0.0.4 - added plugin settings support.
+      - fixed cbc regression
