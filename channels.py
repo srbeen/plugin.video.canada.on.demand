@@ -364,29 +364,41 @@ class CanwestBaseChannel(CBCBaseChannel):
         #example: http://release.theplatform.com/content.select?pid=LIWB_K840fwnU_3_YC_U0WEps6m5tFQ0&UserName=Unknown&Embedded=True&Portal=History&Tracking=True
         for i, urltag in enumerate(soup.findAll(name='url')):
             logging.debug('i=%s, urltag=%s'%(i,urltag))
-            """
-            ref = vidtag.ref
-            if ref is None:
-                ref = vidtag
-            clip_url = base_url + ref['src']
+            clip_url = decode_htmlentities(urltag.contents[0])
+            if clip_url.startswith("http://ad.ca.doubleclick"):
+                logging.debug("Skipping Ad: %s" % (clip_url,))
+                continue # skip ads
 
+            qs = None
+            playpath = None
+            if '<break>' in clip_url:
+                clip_url, playpath = clip_url.split("<break>",1)
+
+            if "?" in clip_url:
+                clip_url, qs = clip_url.split("?", 1)
+            
+            if playpath:
+                clip_url += playpath
+            
             if qs:
-                clip_url = "?" + qs
+                clip_url += "?" + qs
+            
+                
             data = {}
             data.update(self.args)
-            data['Title'] = self.args['Title'] + " clip %s" % (i+1,)
+            data['Title'] = self.args['Title']
             data['remote_url'] = clip_url
             data['action'] = 'play'
             self.plugin.add_list_item(data, is_folder=False)
-            """
+            
         self.plugin.end_list()
 
     def action_browse(self):
         category_id = self.args['remote_url']
         categories = self.get_categories(category_id)
-        logging.debug("Got Categories: %s" % (categories, ))
+        logging.debug("Got %s Categories: %s" % (len(categories), "\n".join(repr(c) for c in categories)))
         releases = self.get_releases(category_id)
-        logging.debug("Got Releases: %s" % (categories, ))
+        logging.debug("Got %s Releases: %s" % (len(releases), "\n".join(repr(r) for r in releases)))
 
         for cat in categories:
             self.plugin.add_list_item(cat)
@@ -398,8 +410,6 @@ class CanwestBaseChannel(CBCBaseChannel):
     def action_play(self):
         self.plugin.set_stream_url(transform_stream_url(self.args['remote_url'], self.swf_url))
 
-    def parse_listing(self):
-        pass
 
     def action_root(self):
         categories = self.get_categories()
