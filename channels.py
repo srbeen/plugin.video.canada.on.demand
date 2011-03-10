@@ -332,9 +332,13 @@ class CanwestBaseChannel(CBCBaseChannel):
         data = self.parse_callback(get_page(url).read())
         rels = []
         for item in data['items']:
+            if item['bitrate'] != '':
+        	title = '%s (%d kbps)'%(item['title'],int(item['bitrate'])/1024)
+            else:
+        	title = item['title']
             rels.append({
                 'Thumb': item['thumbnailURL'],
-                'Title': '%s (%d kbps)'%(item['title'],int(item['bitrate'])/1024),
+                'Title': title,
                 'Description': item['description'],
                 'remote_url': item['ID'],
                 'remote_PID': item['PID'],
