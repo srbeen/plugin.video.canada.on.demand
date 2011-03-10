@@ -19,7 +19,7 @@ def transform_stream_url(url, swf_url=None):
     else:
         swf_url = ''
 
-    match = re.match(r"rtmpe?://(?P<netloc>[\w\d\.]+)/(?P<live_od>(?:\w+))/(?P<path>[^\?]+)(?:\?(?P<querystring>.*))?", url)
+    match = re.match(r"rtmp(?P<rtmpe>e?)://(?P<netloc>[\w\d\.]+)/(?P<live_od>(?:\w+))/(?P<path>[^\?]+)(?:\?(?P<querystring>.*))?", url)
     parts = dict(match.groupdict())
     if "." in parts['path']:
         parts['extension'] = parts['path'].rsplit(".",1)[-1].lower()
@@ -37,9 +37,9 @@ def transform_stream_url(url, swf_url=None):
         parts['q'] = ''
 
     if parts['extension'] == 'mp4':
-        res = "rtmpe://%(netloc)s/%(live_od)s?ovpfv=2.1.4%(amp)s%(querystring)s playpath=%(extension)s:%(path)s.%(extension)s %(swfurl)s" % parts
+        res = "rtmp%(rtmpe)s://%(netloc)s/%(live_od)s?ovpfv=2.1.4%(amp)s%(querystring)s playpath=%(extension)s:%(path)s.%(extension)s %(swfurl)s" % parts
     else:
-        res = "rtmpe://%(netloc)s/%(live_od)s?ovpfv=2.1.4%(amp)s%(querystring)s playpath=%(path)s%(q)s%(querystring)s %(swfurl)s" % parts		
+        res = "rtmp%(rtmpe)s://%(netloc)s/%(live_od)s?ovpfv=2.1.4%(amp)s%(querystring)s playpath=%(path)s%(q)s%(querystring)s %(swfurl)s" % parts		
 
     if parts['live_od'] == 'live':
         res += " live=true"
