@@ -138,9 +138,6 @@ def decode_htmlentities(string):
     entity_re = re.compile("&(#?)(\d{1,5}|\w{1,8});")
     return entity_re.subn(substitute_entity, string)[0]
 
-def encode_url(string):
-    return urllib.urlencode(string)
-
 
 def get_page(url, retry_limit=4):
     """
@@ -164,6 +161,12 @@ def get_soup(url, *args, **kwargs):
 def get_stone_soup(url):
     return BeautifulStoneSoup(get_page(url))
 
+
+def urlencode(string):
+    """ 
+    encodes a querystring (or portion) (mostly space to %20)
+    """
+    return urllib.urlencode(string)
 
 def urldecode(query):
     """

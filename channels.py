@@ -273,7 +273,7 @@ class CanwestBaseChannel(CBCBaseChannel):
 
     def get_root_url(self):
         url = self.base_url + 'getCategoryList?PID=%s'%(self.PID) + \
-            '&field=ID&field=depth&field=title&field=hasReleases&field=fullTitle&field=thumbnailURL&field=hasChildren' + \
+            '&field=ID&field=depth&field=title&field=description&field=hasReleases&field=fullTitle&field=thumbnailURL&field=hasChildren' + \
             '&query=CustomText|PlayerTag|%s'%(self.playerTag)
         logging.debug('get_root_url: %s'%url)
         return url
@@ -318,7 +318,9 @@ class CanwestBaseChannel(CBCBaseChannel):
             data.update(self.args)
             data.update({
                 'remote_url': c['ID'],
+                'Thumb': c['thumbnailURL'],
                 'Title': c['title'],
+                'Plot': c['description'],
                 'action': 'browse',
             })
             cats.append(data)
@@ -340,7 +342,7 @@ class CanwestBaseChannel(CBCBaseChannel):
             rels.append({
                 'Thumb': item['thumbnailURL'],
                 'Title': title,
-                'Description': item['description'],
+                'Plot': item['description'],
                 'remote_url': item['ID'],
                 'remote_PID': item['PID'],
                 'channel': self.args['channel'],
