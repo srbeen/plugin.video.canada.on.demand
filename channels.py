@@ -326,19 +326,19 @@ class CanwestBaseChannel(CBCBaseChannel):
                               or (c['hasReleases'] or c['hasChildren'])
                           )]
 
-            cats = []
-            for c in categories:
-                logging.debug(c)
-                data = {}
-                data.update(self.args)
-                data.update({
-                    'remote_url': c['ID'],
-                    'Thumb': c['thumbnailURL'],
-                    'Title': c['title'],
-                    'Plot': c['description'],
-                    'action': 'browse',
-                })
-                cats.append(data)
+        cats = []
+        for c in categories:
+            logging.debug(c)
+            data = {}
+            data.update(self.args)
+            data.update({
+                'remote_url': c['ID'],
+                'Thumb': c['thumbnailURL'],
+                'Title': c['title'],
+                'Plot': c['description'],
+                'action': 'browse',
+            })
+            cats.append(data)
         return cats
 
     def get_releases(self, category_id):

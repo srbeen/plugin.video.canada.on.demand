@@ -2,3 +2,5 @@
 
 0.0.4 - added plugin settings support.
       - fixed cbc regression
+      
+0.0.5 - Fixed a big bad bug in 0.0.4 which broke all canwest channels.
