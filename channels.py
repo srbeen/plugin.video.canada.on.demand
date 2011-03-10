@@ -43,7 +43,7 @@ class CBCBaseChannel(BaseChannel):
     def get_releases(self, category_id):
         """
         Returns a list of videos in a given category
-        
+
         """
         url = self.base_url + "getReleaseList?PID=%s&field=title&field=PID&field=ID&field=description&field=categoryIDs&field=thumbnailURL&field=URL&field=added&field=airdate&field=expirationDate&field=length&field=Keywords&contentCustomField=backgroundImage&contentCustomField=show&contentCustomField=relatedURL1&contentCustomField=relatedURL2&contentCustomField=relatedURL3&contentCustomField=sport&contentCustomField=seasonNumber&contentCustomField=clipType&contentCustomField=segment&contentCustomField=event&contentCustomField=adCategory&contentCustomField=LiveOnDemand&contentCustomField=AudioVideo&contentCustomField=EpisodeNumber&contentCustomField=RelatedClips&contentCustomField=Genre&contentCustomField=SubTitles&contentCustomField=CommentsEnabled&contentCustomField=CommentsExpirationDate&contentCustomField=adSite&query=CategoryIDs|%s&sortField=airdate&sortDescending=true&startIndex=1&endIndex=50&callback=CBC.APP.UberPlayer.onGetReleaseList" % (self.PID, category_id)
         data = self.parse_callback(get_page(url).read())
@@ -63,7 +63,7 @@ class CBCBaseChannel(BaseChannel):
     def action_browse_episode(self):
         """
         Handles browsing the clips within an episode.
-        
+
         """
         url = "http://release.theplatform.com/content.select?format=SMIL&mbr=true&pid=%s" % (self.args['remote_PID'],)
         soup = get_soup(url)
@@ -74,14 +74,14 @@ class CBCBaseChannel(BaseChannel):
         except ValueError:
             base_url = base_url
             qs = None
-        
-        
+
+
         for i, vidtag in enumerate(soup.findAll('video')):
             ref = vidtag.ref
             if ref is None:
                 ref = vidtag
             clip_url = base_url + ref['src']
-            
+
             if qs:
                 clip_url = "?" + qs
 
@@ -96,21 +96,21 @@ class CBCBaseChannel(BaseChannel):
     def action_browse(self):
         """
         Handles the majority of the navigation.
-        
+
         """
         # The remote_url is 
         # just a category id, not a full url.
         # Other channels plugins may choose to
         # pass the full remote_url to browse here.
         category_id = self.args['remote_url']
-        
-        
+
+
         categories = self.get_categories(category_id)
         releases = self.get_releases(category_id)
 
         for cat in categories:
             self.plugin.add_list_item(cat)
-            
+
         for rel in releases:
             self.plugin.add_list_item(rel)
         self.plugin.end_list()
@@ -126,7 +126,7 @@ class CBCBaseChannel(BaseChannel):
         This method is responsible for returning the info 
         used to generate the Channel listitem at the plugin's
         root level.
-        
+
         """
 
         return {
@@ -176,12 +176,12 @@ class CTVBaseChannel(BaseChannel):
             data['channel'] = self.short_name
             data['action'] = 'play_clip'
             data['Rating'] = 0.0 # the data in level4 already contains a rating. 
-                                 # There was a crash which I THOUGHT was caused by 
-                                 # the rating being a string instead of a float and
-                                 # i'm not sure if it will crash or not if I remove it.
-                                 # I'm making the comment extra large to remind myself
-                                 # to check if its okay to remove.
-                                 
+                                    # There was a crash which I THOUGHT was caused by 
+                                    # the rating being a string instead of a float and
+                                    # i'm not sure if it will crash or not if I remove it.
+                                    # I'm making the comment extra large to remind myself
+                                    # to check if its okay to remove.
+
             data['playable'] = True
             yield data
 
@@ -261,81 +261,20 @@ class CTVBaseChannel(BaseChannel):
 
             yield data
 
-class GlobalTV(CBCBaseChannel):
-    short_name = 'global'
-    long_name = 'Global TV'
+
+
+class CanwestBaseChannel(CBCBaseChannel):
+    is_abstract = True
     base_url = 'http://feeds.theplatform.com/ps/JSON/PortalService/2.2/'
     root_url = None
-    PID = 'W_qa_mi18Zxv8T8yFwmc8FIOolo_tp_g'
-    category_cache_timeout = 60
-    def get_root_url(self):
-        return self.base_url + "getCategoryList?callback=jsonp1299681815422&field=ID&field=depth&field=hasReleases&field=fullTitle&PID=%s&query=CustomText|PlayerTag|z/Global%%20Video%%20Centre&field=title&field=fullTitle&customField=TileAd&customField=DisplayTitle" % (self.PID,)
-
-    def get_cached_categories(self):
-        fpath = os.path.join(self.plugin.get_cache_dir(), 'canada.on.demand.%s.categories.cache' % (self.short_name,))
-        try:
-            if os.path.exists(fpath):
-                data = simplejson.load(open(fpath))
-                if data['cached_at'] + self.category_cache_timeout >= time.time():
-                    logging.debug("Using Cached Categories")
-                    return data['categories']
-        except:
-            return None
-        return None
-
-    
-    def get_categories(self, parent_id=None):
-        url = self.get_root_url()
-        categories = self.get_cached_categories()
-        if not categories:
-            categories = self.parse_callback(get_page(url).read())['items']
-            fpath = os.path.join(self.plugin.get_cache_dir(), 'canada.on.demand.%s.categories.cache' % (self.short_name,))
-            fh = open(fpath, 'w')
-            simplejson.dump({'cached_at': time.time(), 'categories': categories}, fh)
-            fh.close()
-
-        if parent_id is None:
-            categories = [c for c in categories if c['depth'] == 1]
-        else:
-            cat = [c for c in categories if c['ID'] == int(parent_id)][0]
-            categories = [c for c in categories if c['fullTitle'].startswith(cat['fullTitle'] + "/") and c['depth'] == cat['depth'] + 1]
-            
-        cats = []
-        for c in categories:
-            data = {}
-            data.update(self.args)
-            data.update({
-                'remote_url': c['ID'],
-                'Title': c['title'],
-                'action': 'browse',
-            })
-            cats.append(data)
-        
-        return cats
-    
-    
-                          
-        
-    def action_root(self):
-        categories = self.get_categories()
-        for cat in categories:
-            self.plugin.add_list_item(cat)
-        self.plugin.end_list()
-
-
-class HistoryTV(CBCBaseChannel):
-    short_name = 'history'
-    long_name = 'History TV'
-    base_url = 'http://feeds.theplatform.com/ps/JSON/PortalService/2.2/'
-    root_url = None
-    PID = 'IX_AH1EK64oFyEbbwbGHX2Y_2A_ca8pk'
+    PID = None
     playerTag = 'z/History%20Player%20-%20Video%20Center' #urlencode
-    category_cache_timeout = 60
-    
+    category_cache_timeout = 60 * 5 # value is in seconds. so 5 minutes.
+
     def get_root_url(self):
-    	url = self.base_url + 'getCategoryList?PID=%s'%(self.PID) + \
-    		'&field=ID&field=depth&field=title&field=hasReleases&field=fullTitle&field=thumbnailURL' + \
-		'&query=CustomText|PlayerTag|%s'%(self.playerTag)
+        url = self.base_url + 'getCategoryList?PID=%s'%(self.PID) + \
+            '&field=ID&field=depth&field=title&field=hasReleases&field=fullTitle&field=thumbnailURL' + \
+            '&query=CustomText|PlayerTag|%s'%(self.playerTag)
         logging.debug('get_root_url: %s'%url)
         return url
 
@@ -355,7 +294,7 @@ class HistoryTV(CBCBaseChannel):
             return None
         return None
 
-    
+
     def get_categories(self, parent_id=None):
         url = self.get_root_url()
         categories = self.get_cached_categories()
@@ -384,13 +323,13 @@ class HistoryTV(CBCBaseChannel):
             })
             cats.append(data)
         return cats
-    
+
     def get_releases(self, category_id):
         url = self.base_url + 'getReleaseList?PID=%s'%(self.PID) + \
-        	'&field=title&field=PID&field=ID&field=description&field=categoryIDs&field=thumbnailURL&field=URL&field=airdate&field=length' + \
-        	'&sortField=airdate&sortDescending=true&startIndex=1&endIndex=50' + \
-        	'&query=CategoryIDs|%s'%(category_id)
-        	
+            '&field=title&field=PID&field=ID&field=description&field=categoryIDs&field=thumbnailURL&field=URL&field=airdate&field=length' + \
+            '&sortField=airdate&sortDescending=true&startIndex=1&endIndex=50' + \
+            '&query=CategoryIDs|%s'%(category_id)
+
         data = self.parse_callback(get_page(url).read())
         rels = []
         for item in data['items']:
@@ -404,14 +343,14 @@ class HistoryTV(CBCBaseChannel):
                 'action': 'browse_episode',
             })
         return rels
-    
+
     def action_browse_episode(self):
         #url = "http://release.theplatform.com/content.select?format=SMIL&mbr=true&pid=%s" % (self.args['remote_PID'],)
         url= 'http://release.theplatform.com/content.select?pid=%s&UserName=Unknown&Embedded=True&Portal=History&Tracking=True'%(self.args['remote_PID'],)
         logging.debug('action_browse_episode: url=%s'%url)
         soup = get_stone_soup(url)
         logging.debug("StoneSOUP: %s" % (soup,))
-        
+
         """
         base_url = decode_htmlentities(soup.meta['base'])
         try:
@@ -420,7 +359,7 @@ class HistoryTV(CBCBaseChannel):
             base_url = base_url
             qs = None
         """
-        
+
         #need to learn how to play with BeautifulStonSoup or... regex this mofo.
         #example: http://release.theplatform.com/content.select?pid=LIWB_K840fwnU_3_YC_U0WEps6m5tFQ0&UserName=Unknown&Embedded=True&Portal=History&Tracking=True
         for i, urltag in enumerate(soup.findAll(name='url')):
@@ -430,7 +369,7 @@ class HistoryTV(CBCBaseChannel):
             if ref is None:
                 ref = vidtag
             clip_url = base_url + ref['src']
-            
+
             if qs:
                 clip_url = "?" + qs
             data = {}
@@ -441,7 +380,7 @@ class HistoryTV(CBCBaseChannel):
             self.plugin.add_list_item(data, is_folder=False)
             """
         self.plugin.end_list()
-    
+
     def action_browse(self):
         category_id = self.args['remote_url']
         categories = self.get_categories(category_id)
@@ -454,21 +393,34 @@ class HistoryTV(CBCBaseChannel):
         for rel in releases:
             self.plugin.add_list_item(rel)
         self.plugin.end_list()
-            
-        
+
+
     def action_play(self):
         self.plugin.set_stream_url(transform_stream_url(self.args['remote_url'], self.swf_url))
-    
+
     def parse_listing(self):
         pass
-        
+
     def action_root(self):
         categories = self.get_categories()
         for cat in categories:
             self.plugin.add_list_item(cat)
         self.plugin.end_list()
 
-
+class GlobalTV(CanwestBaseChannel):
+    short_name = 'global'
+    long_name = 'Global TV'
+    PID = 'W_qa_mi18Zxv8T8yFwmc8FIOolo_tp_g'
+    playerTag = 'z/Global%20Video%20Centre' #urlencode
+    
+    
+class HistoryTV(CanwestBaseChannel):
+    short_name = 'history'
+    long_name = 'History TV'
+    PID = 'IX_AH1EK64oFyEbbwbGHX2Y_2A_ca8pk'
+    playerTag = 'z/History%20Player%20-%20Video%20Center' #urlencode
+    
+    
 class CBC(CBCBaseChannel):
     short_name = 'cbc'
     long_name = 'CBC'
@@ -574,5 +526,4 @@ class BravoFact(CTVBaseChannel):
     short_name = 'bravofact'
     base_url = 'http://watch.bravofact.com/AJAX/'
     swf_url = 'http://watch.bravofact.com/Flash/player.swf?themeURL=http://watch.bravofact.com/themes/BravoFact/player/theme.aspx'
-
 
