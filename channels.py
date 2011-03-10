@@ -325,7 +325,7 @@ class CanwestBaseChannel(CBCBaseChannel):
 
     def get_releases(self, category_id):
         url = self.base_url + 'getReleaseList?PID=%s'%(self.PID) + \
-            '&field=title&field=PID&field=ID&field=description&field=categoryIDs&field=thumbnailURL&field=URL&field=airdate&field=length' + \
+            '&field=title&field=PID&field=ID&field=description&field=categoryIDs&field=thumbnailURL&field=URL&field=airdate&field=length&field=bitrate' + \
             '&sortField=airdate&sortDescending=true&startIndex=1&endIndex=50' + \
             '&query=CategoryIDs|%s'%(category_id)
 
@@ -334,7 +334,7 @@ class CanwestBaseChannel(CBCBaseChannel):
         for item in data['items']:
             rels.append({
                 'Thumb': item['thumbnailURL'],
-                'Title': item['title'],
+                'Title': '%s (%d kbps)'%(item['title'],int(item['bitrate'])/1024),
                 'Description': item['description'],
                 'remote_url': item['ID'],
                 'remote_PID': item['PID'],
