@@ -269,11 +269,11 @@ class CanwestBaseChannel(CBCBaseChannel):
     root_url = None
     PID = None
     playerTag = None
-    category_cache_timeout = 60 * 5 # value is in seconds. so 5 minutes.
+    category_cache_timeout = 1 # value is in seconds. so 5 minutes.
 
     def get_root_url(self):
         url = self.base_url + 'getCategoryList?PID=%s'%(self.PID) + \
-            '&field=ID&field=depth&field=title&field=hasReleases&field=fullTitle&field=thumbnailURL' + \
+            '&field=ID&field=depth&field=title&field=hasReleases&field=fullTitle&field=thumbnailURL&field=hasChildren' + \
             '&query=CustomText|PlayerTag|%s'%(self.playerTag)
         logging.debug('get_root_url: %s'%url)
         return url
@@ -306,13 +306,14 @@ class CanwestBaseChannel(CBCBaseChannel):
             fh.close()
 
         if parent_id is None:
-            categories = [c for c in categories if c['depth'] == 1]
+            categories = [c for c in categories if c['depth'] == 1 and (c['hasReleases'] or c['hasChildren'])]
         else:
             cat = [c for c in categories if c['ID'] == int(parent_id)][0]
-            categories = [c for c in categories if c['fullTitle'].startswith(cat['fullTitle'] + "/") and c['depth'] == cat['depth'] + 1]
+            categories = [c for c in categories if c['fullTitle'].startswith(cat['fullTitle'] + "/") and c['depth'] == cat['depth'] + 1 and (c['hasReleases'] or c['hasChildren'])]
 
         cats = []
         for c in categories:
+            logging.debug(c)
             data = {}
             data.update(self.args)
             data.update({

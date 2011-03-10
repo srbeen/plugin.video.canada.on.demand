@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="plugin.video.canada.on.demand"
        name="Canada On Demand"
-       version="0.0.2"
+       version="0.0.3"
        provider-name="andre">
   <requires>
     <import addon="xbmc.python"
@@ -16,7 +16,7 @@
         <provides>video</provides>
   </extension>
   <extension point="xbmc.addon.metadata">
-    <summary>Watch recorded and live streams from all major canadian television stations.</summary>
+    <summary></summary>
     <description>desc</description>
     <platform>all</platform>
 	<disclaimer></disclaimer>
