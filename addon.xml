@@ -16,7 +16,7 @@
         <provides>video</provides>
   </extension>
   <extension point="xbmc.addon.metadata">
-    <summary>Watch recorded and live streams from all major canadian television stations.</summary>
+    <summary></summary>
     <description>desc</description>
     <platform>all</platform>
 	<disclaimer></disclaimer>
