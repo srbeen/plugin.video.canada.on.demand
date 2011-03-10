@@ -444,14 +444,14 @@ class HGTV(CanwestBaseChannel):
     playerTag = 'z/HGTV%20Player%20-%20Video%20Center' #urlencode
     #swf_url = 'http://www.hgtv.ca/includes/cwp/swf/flvPlayer.swf'
 
-"""
+
 class Showcase(CanwestBaseChannel):
-    #short_name = 'showcase'
-    #long_name = 'Showcase'
-    #PID = '6yC6lGVHaVA8oWSm1F9PaIYc9tOTzDqY'
-    #playerTag = 'z/FOODNET%20Player%20-%20Video%20Centre' #urlencode
-    #swf_url = 'http://webdata.globaltv.com/global/canwestPlayer/swf/4.1/flvPlayer.swf'
-"""
+    short_name = 'showcase'
+    long_name = 'Showcase'
+    PID = 'sx9rVurvXUY4nOXBoB2_AdD1BionOoPy'
+    playerTag = 'z/Showcase%20Video%20Centre' #urlencode
+    #swf_url = 'http://www.showcase.ca/video/swf/flvPlayer.swf'
+    
 
 class SliceTV(CanwestBaseChannel):
     short_name = 'slice'
