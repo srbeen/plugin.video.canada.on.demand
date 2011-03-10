@@ -1,7 +1,7 @@
 import os
 import cgi
 import urllib, urllib2
-from BeautifulSoup import BeautifulSoup
+from BeautifulSoup import BeautifulSoup, BeautifulStoneSoup
 import re
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -123,6 +123,9 @@ def decode_htmlentities(string):
     entity_re = re.compile("&(#?)(\d{1,5}|\w{1,8});")
     return entity_re.subn(substitute_entity, string)[0]
 
+def encode_url(string):
+    return urllib.urlencode(string)
+
 
 def get_page(url):
     retries = 0
@@ -136,6 +139,9 @@ def get_page(url):
 
 def get_soup(url):
     return BeautifulSoup(get_page(url))
+
+def get_stone_soup(url):
+    return BeautifulStoneSoup(get_page(url))
 
 
 def urldecode(query):
