@@ -6,3 +6,5 @@
 0.0.5 - Fixed a big bad bug in 0.0.4 which broke all canwest channels.
 
 0.0.6 - Improved playback of with CBC and Canwest streams. 
+
+0.0.7 - added (untested) http proxy support
