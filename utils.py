@@ -12,10 +12,10 @@ class CTVException(Exception):
     pass
 
 
-def transform_stream_url(url, swf_url=None, use_rtmp=False):
+def transform_stream_url(url, swf_url=None, playpath_qs=True):
     logging.debug("ORIGINAL URL: %s"%(url,))
     if swf_url:
-        swf_url = 'swfurl=%s' % (swf_url,)
+        swf_url = 'swfurl=%s swfvfy=true' % (swf_url,)
     else:
         swf_url = ''
 
@@ -31,18 +31,20 @@ def transform_stream_url(url, swf_url=None, use_rtmp=False):
     parts['amp'] = '&'
     parts['q'] = '?'
 
-    if parts['rtmpe'] and use_rtmp:
-        parts['rtmpe'] = ''
         
     if 'querystring' not in parts or not parts['querystring']:
-        parts['querystring'] = ''	    
+        parts['querystring'] = ''
         parts['amp'] = ''
         parts['q'] = ''
 
     if parts['extension'] == 'mp4':
-        res = "rtmp%(rtmpe)s://%(netloc)s/%(live_od)s?ovpfv=2.1.4%(amp)s%(querystring)s playpath=%(extension)s:%(path)s.%(extension)s %(swfurl)s" % parts
+        res = "rtmp%(rtmpe)s://%(netloc)s/%(live_od)s/?ovpfv=2.1.4%(amp)s%(querystring)s playpath=%(extension)s:%(path)s.%(extension)s %(swfurl)s" % parts
     else:
-        res = "rtmp%(rtmpe)s://%(netloc)s/%(live_od)s?ovpfv=2.1.4%(amp)s%(querystring)s playpath=%(path)s%(q)s%(querystring)s %(swfurl)s" % parts		
+        if playpath_qs:
+            res = "rtmp%(rtmpe)s://%(netloc)s/%(live_od)s/?ovpfv=2.1.4%(amp)s%(querystring)s playpath=%(path)s%(q)s%(querystring)s %(swfurl)s" % parts
+        else:
+            res = "rtmp%(rtmpe)s://%(netloc)s/%(live_od)s/?ovpfv=2.1.4%(amp)s%(querystring)s playpath=%(path)s %(swfurl)s" % parts
+
 
     if parts['live_od'] == 'live':
         res += " live=true"
@@ -102,7 +104,7 @@ def parse_bad_json(json):
         elif value == 'false':
             value = False
         elif value == 'null':
-            value = None	    
+            value = None
 
         if isinstance(value, basestring):
 
