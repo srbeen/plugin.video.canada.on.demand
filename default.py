@@ -179,7 +179,11 @@ class OnDemandPlugin(object):
     
         
     def __init__(self, script_url, handle, querystring):
-        
+	proxy = self.get_setting("http_proxy")
+	if proxy:
+	    proxy_handler = urllib2.ProxyHandler({'http':proxy})
+	    opener = urllib2.build_opener(proxy_handler)
+	    urllib2.install_opener(opener)
         self.script_url = script_url
         self.handle = int(handle)
         if len(querystring) > 2:
