@@ -148,6 +148,8 @@ class CTVBaseChannel(BaseChannel):
         rurl = "http://esi.ctv.ca/datafeed/urlgenjs.aspx?vid=%s" % (self.args['ClipId'],)
         data = transform_stream_url(get_page(rurl).read().strip()[17:].split("'",1)[0], self.swf_url)
         url = data
+        if self.args['use_rtmp'] and url.startswith("rtmpe://"):
+            url = "rtmp://" + url[8:]
         self.plugin.set_stream_url(url)
 
 
@@ -156,14 +158,33 @@ class CTVBaseChannel(BaseChannel):
         div = get_soup(rurl).find('div', {'id': re.compile('^Level\d$')})
         levelclass = [c for c in re.split(r"\s+", div['class']) if c.startswith("Level")][0]
         levelclass = levelclass[5:]
+        if levelclass == '4': # Browsing at the clip level
+                              # We want to build a context menu
+                              # Item to allow 're-browsing' this directory
+                              # with forced rtmpe urls.
+            menu_args = {}
+            menu_args.update(self.args)
 
+            if self.args.get('use_rtmp'):
+                del menu_args['use_rtmp']
+                menuitem = ('Use Given Urls', 'Container.Update(%s)' % (self.plugin.get_url(menu_args)))
+            else:
+                menu_args['use_rtmp'] = 1
+                menuitem = ('Force RTMP Urls', 'Container.Update(%s)' % (self.plugin.get_url(menu_args)))
+            
+            context_menu_items = [menuitem]
+        else:
+            context_menu_items = None
+        
         parser = getattr(self, 'parse_level_%s' % (levelclass,))
-
 
         for item in parser(div):
             if item.get('playable', False):
-                logging.debug("Adding Playable Item")
-                self.plugin.add_list_item(item, is_folder=False)
+                if self.args.get('use_rtmp'):
+                    logging.debug("Adding Forced RTMP Item")
+                else:
+                    logging.debug("Adding Playable Item")
+                self.plugin.add_list_item(item, is_folder=False, context_menu_items=context_menu_items)
             else:
                 self.plugin.add_list_item(item)
         self.plugin.end_list()

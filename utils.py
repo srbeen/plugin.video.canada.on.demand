@@ -12,7 +12,7 @@ class CTVException(Exception):
     pass
 
 
-def transform_stream_url(url, swf_url=None):
+def transform_stream_url(url, swf_url=None, use_rtmp=False):
     logging.debug("ORIGINAL URL: %s"%(url,))
     if swf_url:
         swf_url = 'swfurl=%s' % (swf_url,)
@@ -31,6 +31,9 @@ def transform_stream_url(url, swf_url=None):
     parts['amp'] = '&'
     parts['q'] = '?'
 
+    if parts['rtmpe'] and use_rtmp:
+        parts['rtmpe'] = ''
+        
     if 'querystring' not in parts or not parts['querystring']:
         parts['querystring'] = ''	    
         parts['amp'] = ''
