@@ -148,7 +148,7 @@ class CTVBaseChannel(BaseChannel):
         rurl = "http://esi.ctv.ca/datafeed/urlgenjs.aspx?vid=%s" % (self.args['ClipId'],)
         data = transform_stream_url(get_page(rurl).read().strip()[17:].split("'",1)[0], self.swf_url)
         url = data
-        if self.args['use_rtmp'] and url.startswith("rtmpe://"):
+        if self.args.get('use_rtmp') and url.startswith("rtmpe://"):
             url = "rtmp://" + url[8:]
         self.plugin.set_stream_url(url)
 
