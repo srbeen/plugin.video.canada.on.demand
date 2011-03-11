@@ -183,7 +183,7 @@ class CTVBaseChannel(BaseChannel):
                 if self.args.get('use_rtmp'):
                     logging.debug("Adding Forced RTMP Item")
                 else:
-                    logging.debug("Adding Playable Item")
+                    logging.debug("Adding Playable Item: title=%s"%item['Title'])
                 self.plugin.add_list_item(item, is_folder=False, context_menu_items=context_menu_items)
             else:
                 self.plugin.add_list_item(item)
@@ -224,6 +224,7 @@ class CTVBaseChannel(BaseChannel):
                 'Title': decode_htmlentities(a['title']),
                 'channel': self.short_name,
             })
+            
             try:
                 data['Thumb'] = dl.find('dd', {'class': 'Thumbnail'}).find('img')['src']
             except:
@@ -454,12 +455,13 @@ class CanwestBaseChannel(CBCBaseChannel):
         #rtmp://cp68811.edgefcs.net/ondemand?ovpfv=2.1.4&auth=dbEcOb.dad3dgdddiaOdubsdlcPcEbTbxcZ-bnExxk-4q-d9i-1onGAqPqCF0P9&aifp=1234&slist=Canwest_Broadcast_Entertainment/ playpath=Canwest_Broadcast_Entertainment/History_Ancients_S1_Ep1006?auth=dbEcOb.dad3dgdddiaOdubsdlcPcEbTbxcZ-bnExxk-4q-d9i-1onGAqPqCF0P9&aifp=1234&slist=Canwest_Broadcast_Entertainment/ swfurl=http://www.history.ca/video/cwp/swf/flvPlayer.swf swfvfy=true
         self.plugin.set_stream_url(transform_stream_url(self.args['remote_url'], self.swf_url, playpath_qs=False))
 
-
     def action_root(self):
         categories = self.get_categories()
         for cat in categories:
             self.plugin.add_list_item(cat)
         self.plugin.end_list()
+
+
 
 class GlobalTV(CanwestBaseChannel):
     short_name = 'global'

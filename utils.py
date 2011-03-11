@@ -80,7 +80,7 @@ def qasplit(chars, sep=",", quote="'"):
 
 def parse_bad_json(json):
     """
-    This is currently only used by CBC, it parses Javascript objects
+    This is currently only used by CTV, it parses Javascript objects
     written in javascript (but not valid json):
     for example: "{IsTrue: true, myName: "Something", otherKey: null}"
     
