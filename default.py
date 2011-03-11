@@ -13,7 +13,7 @@ __plugin__ = "Canada On Demand"
 __author__ = 'Andre <andrepleblanc@gmail.com>'
 __url__ = 'http://github.com/andrepl/plugin.video.canada.on.demand/'
 __date__ = '03-10-2011'
-__version__ = '0.0.6'
+__version__ = '0.0.7'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
 
@@ -179,7 +179,11 @@ class OnDemandPlugin(object):
     
         
     def __init__(self, script_url, handle, querystring):
-        
+	proxy = self.get_setting("http_proxy")
+	if proxy:
+	    proxy_handler = urllib2.ProxyHandler({'http':proxy})
+	    opener = urllib2.build_opener(proxy_handler)
+	    urllib2.install_opener(opener)
         self.script_url = script_url
         self.handle = int(handle)
         if len(querystring) > 2:

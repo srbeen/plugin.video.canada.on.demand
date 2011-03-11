@@ -151,9 +151,10 @@ def get_page(url, retry_limit=4):
     """
     
     retries = 0
+	
     while retries < retry_limit:
         logging.debug("fetching %s" % (url,))
-        try:
+        try:            
             return urllib2.urlopen(url)
         except (urllib2.HTTPError, urllib2.URLError), e:
             retries += 1
