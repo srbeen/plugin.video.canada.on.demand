@@ -13,7 +13,7 @@ __plugin__ = "Canada On Demand"
 __author__ = 'Andre <andrepleblanc@gmail.com>'
 __url__ = 'http://github.com/andrepl/plugin.video.canada.on.demand/'
 __date__ = '03-10-2011'
-__version__ = '0.0.5'
+__version__ = '0.0.6'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
 
@@ -85,7 +85,8 @@ class OnDemandPlugin(object):
         return __settings__.getSetting(id)
 
 
-    def add_list_item(self, info, is_folder=True, return_only=False):
+    def add_list_item(self, info, is_folder=True, return_only=False, 
+                      context_menu_items=None, clear_context_menu=False):
         """
         Creates an XBMC ListItem from the data contained in the info dict.
         
@@ -96,7 +97,8 @@ class OnDemandPlugin(object):
 
         if return_only is True, the item item isn't added to the xbmc screen but 
         is returned instead.
-
+        
+        
         Note: This function does some renaming of specific keys in the info dict.
         you'll have to read the source to see what is expected of a listitem, but in 
         general you want to pass in self.args + a new 'action' and a new 'remote_url'
@@ -114,20 +116,26 @@ class OnDemandPlugin(object):
             thumbnailImage=info['Thumb']
         )
         
-                
+        
         if not is_folder:
             li.setProperty("IsPlayable", "true") 
+            
         li.setInfo(type='Video', infoLabels=dict((k, unicode(v)) for k, v in info.iteritems()))
-
+        
+        # Add Context Menu Items
+        if context_menu_items:
+            li.addContextMenuItems(context_menu_items, 
+                                   replaceItems=clear_context_menu)
+            
+            
+        # Handle the return-early case
         if not return_only:
             kwargs = dict(
                 handle=self.handle, 
                 url=self.get_url(info),
                 listitem=li,
                 isFolder=is_folder
-            )
-            
-            
+            )            
             return xbmcplugin.addDirectoryItem(**kwargs)
         
         return li

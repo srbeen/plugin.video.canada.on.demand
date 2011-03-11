@@ -31,6 +31,7 @@ def transform_stream_url(url, swf_url=None, playpath_qs=True):
     parts['amp'] = '&'
     parts['q'] = '?'
 
+        
     if 'querystring' not in parts or not parts['querystring']:
         parts['querystring'] = ''
         parts['amp'] = ''

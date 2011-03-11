@@ -148,6 +148,8 @@ class CTVBaseChannel(BaseChannel):
         rurl = "http://esi.ctv.ca/datafeed/urlgenjs.aspx?vid=%s" % (self.args['ClipId'],)
         data = transform_stream_url(get_page(rurl).read().strip()[17:].split("'",1)[0], self.swf_url)
         url = data
+        if self.args.get('use_rtmp') and url.startswith("rtmpe://"):
+            url = "rtmp://" + url[8:]
         self.plugin.set_stream_url(url)
 
 
@@ -156,14 +158,33 @@ class CTVBaseChannel(BaseChannel):
         div = get_soup(rurl).find('div', {'id': re.compile('^Level\d$')})
         levelclass = [c for c in re.split(r"\s+", div['class']) if c.startswith("Level")][0]
         levelclass = levelclass[5:]
+        if levelclass == '4': # Browsing at the clip level
+                              # We want to build a context menu
+                              # Item to allow 're-browsing' this directory
+                              # with forced rtmpe urls.
+            menu_args = {}
+            menu_args.update(self.args)
 
+            if self.args.get('use_rtmp'):
+                del menu_args['use_rtmp']
+                menuitem = ('Use Given Urls', 'Container.Update(%s)' % (self.plugin.get_url(menu_args)))
+            else:
+                menu_args['use_rtmp'] = 1
+                menuitem = ('Force RTMP Urls', 'Container.Update(%s)' % (self.plugin.get_url(menu_args)))
+            
+            context_menu_items = [menuitem]
+        else:
+            context_menu_items = None
+        
         parser = getattr(self, 'parse_level_%s' % (levelclass,))
-
 
         for item in parser(div):
             if item.get('playable', False):
-                logging.debug("Adding Playable Item")
-                self.plugin.add_list_item(item, is_folder=False)
+                if self.args.get('use_rtmp'):
+                    logging.debug("Adding Forced RTMP Item")
+                else:
+                    logging.debug("Adding Playable Item")
+                self.plugin.add_list_item(item, is_folder=False, context_menu_items=context_menu_items)
             else:
                 self.plugin.add_list_item(item)
         self.plugin.end_list()
@@ -171,6 +192,7 @@ class CTVBaseChannel(BaseChannel):
 
     def parse_level_4(self, soup):
         for li in soup.findAll('li'):
+            
             a = li.find('dl', {"class": "Item"}).dt.a
             data = {}
             data.update(self.args)
@@ -430,7 +452,7 @@ class CanwestBaseChannel(CBCBaseChannel):
     def action_play(self):
         #rtmp://cp68811.edgefcs.net/ondemand/?auth=dbEa5aUbNbNaYasbMcgdub9aVaOatcfbraO-bnExkl-4q-d9i-8nrEJoTnwC5N9&amp;aifp=1234&amp;slist=Canwest_Broadcast_Entertainment/ playpath=Canwest_Broadcast_Entertainment/History_Ancients_S1_Ep1004_V2 swfurl=http://www.history.ca/video/cwp/swf/flvPlayer.swf swfvfy=true
         #rtmp://cp68811.edgefcs.net/ondemand?ovpfv=2.1.4&auth=dbEcOb.dad3dgdddiaOdubsdlcPcEbTbxcZ-bnExxk-4q-d9i-1onGAqPqCF0P9&aifp=1234&slist=Canwest_Broadcast_Entertainment/ playpath=Canwest_Broadcast_Entertainment/History_Ancients_S1_Ep1006?auth=dbEcOb.dad3dgdddiaOdubsdlcPcEbTbxcZ-bnExxk-4q-d9i-1onGAqPqCF0P9&aifp=1234&slist=Canwest_Broadcast_Entertainment/ swfurl=http://www.history.ca/video/cwp/swf/flvPlayer.swf swfvfy=true
-        self.plugin.set_stream_url(transform_stream_url(self.args['remote_url'], self.swf_url))
+        self.plugin.set_stream_url(transform_stream_url(self.args['remote_url'], self.swf_url, playpath_qs=False))
 
 
     def action_root(self):
