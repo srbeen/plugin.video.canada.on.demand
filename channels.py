@@ -381,7 +381,6 @@ class CanwestBaseChannel(CBCBaseChannel):
             qs = None
         """
 
-        #need to learn how to play with BeautifulStonSoup or... regex this mofo.
         #example: http://release.theplatform.com/content.select?pid=LIWB_K840fwnU_3_YC_U0WEps6m5tFQ0&UserName=Unknown&Embedded=True&Portal=History&Tracking=True
         for i, urltag in enumerate(soup.findAll(name='url')):
             logging.debug('i=%s, urltag=%s'%(i,urltag))
@@ -429,6 +428,8 @@ class CanwestBaseChannel(CBCBaseChannel):
 
 
     def action_play(self):
+        #rtmp://cp68811.edgefcs.net/ondemand/?auth=dbEa5aUbNbNaYasbMcgdub9aVaOatcfbraO-bnExkl-4q-d9i-8nrEJoTnwC5N9&amp;aifp=1234&amp;slist=Canwest_Broadcast_Entertainment/ playpath=Canwest_Broadcast_Entertainment/History_Ancients_S1_Ep1004_V2 swfurl=http://www.history.ca/video/cwp/swf/flvPlayer.swf swfvfy=true
+        #rtmp://cp68811.edgefcs.net/ondemand?ovpfv=2.1.4&auth=dbEcOb.dad3dgdddiaOdubsdlcPcEbTbxcZ-bnExxk-4q-d9i-1onGAqPqCF0P9&aifp=1234&slist=Canwest_Broadcast_Entertainment/ playpath=Canwest_Broadcast_Entertainment/History_Ancients_S1_Ep1006?auth=dbEcOb.dad3dgdddiaOdubsdlcPcEbTbxcZ-bnExxk-4q-d9i-1onGAqPqCF0P9&aifp=1234&slist=Canwest_Broadcast_Entertainment/ swfurl=http://www.history.ca/video/cwp/swf/flvPlayer.swf swfvfy=true
         self.plugin.set_stream_url(transform_stream_url(self.args['remote_url'], self.swf_url))
 
 
@@ -450,7 +451,7 @@ class HistoryTV(CanwestBaseChannel):
     long_name = 'History TV'
     PID = 'IX_AH1EK64oFyEbbwbGHX2Y_2A_ca8pk'
     playerTag = 'z/History%20Player%20-%20Video%20Center' #urlencode
-    #swf_url = 'http://www.history.ca/video/cwp/swf/flvPlayer.swf'
+    swf_url = 'http://www.history.ca/video/cwp/swf/flvPlayer.swf'
 
 class FoodNetwork(CanwestBaseChannel):
     short_name = 'foodnet'
