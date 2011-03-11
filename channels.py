@@ -171,6 +171,7 @@ class CTVBaseChannel(BaseChannel):
 
     def parse_level_4(self, soup):
         for li in soup.findAll('li'):
+            
             a = li.find('dl', {"class": "Item"}).dt.a
             data = {}
             data.update(self.args)
