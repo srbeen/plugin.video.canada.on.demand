@@ -1,4 +1,5 @@
 <settings>
    <setting id="show_empty_cat" type="bool" label="30000" default="false"/>
    <setting id="http_proxy" type="text" label="30001" default="" />
+   <setting id="http_proxy_port" type="text" label="30002" default="" />
 </settings>

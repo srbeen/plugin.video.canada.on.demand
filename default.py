@@ -12,8 +12,8 @@ from channels import *
 __plugin__ = "Canada On Demand"
 __author__ = 'Andre <andrepleblanc@gmail.com>'
 __url__ = 'http://github.com/andrepl/plugin.video.canada.on.demand/'
-__date__ = '03-10-2011'
-__version__ = '0.0.7'
+__date__ = '03-11-2011'
+__version__ = '0.0.8'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
 
@@ -179,22 +179,22 @@ class OnDemandPlugin(object):
     
         
     def __init__(self, script_url, handle, querystring):
-	proxy = self.get_setting("http_proxy")
-	if proxy:
-	    proxy_handler = urllib2.ProxyHandler({'http':proxy})
-	    opener = urllib2.build_opener(proxy_handler)
-	    urllib2.install_opener(opener)
+        proxy = self.get_setting("http_proxy")
+        port = self.get_setting("http_proxy_port")
+        if proxy and port:
+            proxy_handler = urllib2.ProxyHandler({'http':'%s:%s'%(proxy,port)})
+            opener = urllib2.build_opener(proxy_handler)
+            urllib2.install_opener(opener)
+
         self.script_url = script_url
         self.handle = int(handle)
         if len(querystring) > 2:
             self.querystring = querystring[1:]
             items = urldecode(self.querystring)
             self.args = dict(items)
-            
         else:
             self.querystring = querystring
             self.args = {}
-        
         logging.debug("Constructed Plugin %s" % (self.__dict__,))
         
 if __name__ == '__main__':

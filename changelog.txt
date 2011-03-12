@@ -8,3 +8,6 @@
 0.0.6 - Improved playback of with CBC and Canwest streams. 
 
 0.0.7 - added (untested) http proxy support
+
+0.0.8 - added port number to http proxy settings 
+

@@ -1,4 +1,5 @@
 <strings>
     <string id="30000">Display empty categories (Shows with no webclips)</string>
     <string id="30001">HTTP Proxy Server</string>
+    <string id="30002">HTTP Proxy Server port</string>
 </strings>
