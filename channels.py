@@ -332,6 +332,7 @@ class CanwestBaseChannel(ThePlatformBaseChannel):
     is_abstract = True
     base_url = 'http://feeds.theplatform.com/ps/JSON/PortalService/2.2/'
     PID = None
+    root_depth = 1
 
     def get_categories_json(self):#,arg):
         return ThePlatformBaseChannel.get_categories_json(self) # + '&query=ParentIDs|%s'%arg
@@ -342,7 +343,7 @@ class CanwestBaseChannel(ThePlatformBaseChannel):
     def get_child_categories(self, categorylist, parent_id):
         if parent_id is None:
             categories = [c for c in categorylist \
-                          if c['depth'] == 1
+                          if c['depth'] == self.root_depth
                           and (
                               self.plugin.get_setting('show_empty_cat') == True
                               or (c['hasReleases'] or c['hasChildren'])
@@ -361,8 +362,10 @@ class CanwestBaseChannel(ThePlatformBaseChannel):
             """
         return categories
 
-    #is folding-back into ThePlatformBase even possible??
     def action_browse_episode(self):
+        self.action_browse_episode_with_filter('http://ad.ca.doubleclick')
+
+    def action_browse_episode_with_filter(self, ads_start_url):
         #url = "http://release.theplatform.com/content.select?format=SMIL&mbr=true&pid=%s" % (self.args['remote_PID'],)
         url= 'http://release.theplatform.com/content.select?pid=%s&UserName=Unknown&Embedded=True&Portal=History&Tracking=True'%(self.args['remote_PID'],)
         logging.debug('action_browse_episode: url=%s'%url)
@@ -373,7 +376,7 @@ class CanwestBaseChannel(ThePlatformBaseChannel):
         for i, urltag in enumerate(soup.findAll(name='url')):
             logging.debug('i=%s, urltag=%s'%(i,urltag))
             clip_url = decode_htmlentities(urltag.contents[0])
-            if clip_url.startswith("http://ad.ca.doubleclick"):
+            if clip_url.startswith(ads_start_url):
                 logging.debug("Skipping Ad: %s" % (clip_url,))
                 continue # skip ads
 
@@ -416,7 +419,7 @@ class GlobalTV(CanwestBaseChannel):
     PID = 'W_qa_mi18Zxv8T8yFwmc8FIOolo_tp_g'
     #swf_url = 'http://www.globaltv.com/video/swf/flvPlayer.swf'
 
-    def get_categories_json(self,arg):#='0'):
+    def get_categories_json(self,arg):
         url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/Global%20Video%20Centre' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
@@ -433,7 +436,7 @@ class HistoryTV(CanwestBaseChannel):
     PID = 'IX_AH1EK64oFyEbbwbGHX2Y_2A_ca8pk'
     swf_url = 'http://www.history.ca/video/cwp/swf/flvPlayer.swf'
 
-    def get_categories_json(self,arg):#='0'):
+    def get_categories_json(self,arg):
         url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/History%20Player%20-%20Video%20Center' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
@@ -450,7 +453,7 @@ class FoodNetwork(CanwestBaseChannel):
     PID = '6yC6lGVHaVA8oWSm1F9PaIYc9tOTzDqY'
     #swf_url = 'http://webdata.globaltv.com/global/canwestPlayer/swf/4.1/flvPlayer.swf'
 
-    def get_categories_json(self,arg):#='0'):
+    def get_categories_json(self,arg):
         url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/FOODNET%20Player%20-%20Video%20Centre' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
@@ -467,7 +470,7 @@ class HGTV(CanwestBaseChannel):
     PID = 'HmHUZlCuIXO_ymAAPiwCpTCNZ3iIF1EG'
     #swf_url = 'http://www.hgtv.ca/includes/cwp/swf/flvPlayer.swf'
 
-    def get_categories_json(self,arg):#='0'):
+    def get_categories_json(self,arg):
         url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/HGTV%20Player%20-%20Video%20Center' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
@@ -484,7 +487,7 @@ class Showcase(CanwestBaseChannel):
     PID = 'sx9rVurvXUY4nOXBoB2_AdD1BionOoPy'
     #swf_url = 'http://www.showcase.ca/video/swf/flvPlayer.swf'
 
-    def get_categories_json(self,arg):#='0'):
+    def get_categories_json(self,arg):
         url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/Showcase%20Video%20Centre' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
@@ -501,7 +504,7 @@ class SliceTV(CanwestBaseChannel):
     PID = 'EJZUqE_dB8XeUUgiJBDE37WER48uEQCY'
     #swf_url = 'http://www.slice.ca/includes/cwp/swf/flvPlayer.swf'
 
-    def get_categories_json(self,arg):#='0'):
+    def get_categories_json(self,arg):
         url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/Slice%20Player%20-%20New%20Video%20Center' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
@@ -518,7 +521,7 @@ class TVTropolis(CanwestBaseChannel):
     PID = '3i9zvO0c6HSlP7Fz848a0DvzBM0jUWcC'
     #swf_url = 'http://www.tvtropolis.com/swf/cwp/flvPlayer.swf'
 
-    def get_categories_json(self):#='0'):
+    def get_categories_json(self):
         url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/TVTropolis%20Player%20-%20Video%20Center' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
@@ -535,7 +538,7 @@ class diyNet(CanwestBaseChannel):
     PID = 'FgLJftQA35gBSx3kKPM46ZVvhP6JxTYt'
     #swf_url = 'http://www.diy.ca/Includes/cwp/swf/flvPlayer.swf'
 
-    def get_categories_json(self,arg):#='0'):
+    def get_categories_json(self,arg):
         url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/DIY%20Network%20-%20Video%20Centre' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
@@ -545,6 +548,27 @@ class diyNet(CanwestBaseChannel):
         logging.debug('get_releases_json: %s'%url)
         return url
 
+
+
+class YTV(CanwestBaseChannel):
+    short_name = 'ytv'
+    long_name = 'YTV'
+    PID = 't4r_81mEo8zCyfYh_AKeHJxmZleq26Vx'
+    swf_url = 'http://www.ytv.com/PDK/swf/flvPlayer.swf'
+    root_depth = 0
+
+    def get_categories_json(self,arg):
+        url = CanwestBaseChannel.get_categories_json(self) #urlencode
+        logging.debug('get_categories_json: %s'%url)
+        return url
+
+    def get_releases_json(self,arg='0'):
+        url = '%s' % CanwestBaseChannel.get_releases_json(self,arg)
+        logging.debug('get_releases_json: %s'%url)
+        return url
+
+    def action_browse_episode(self):
+        CanwestBaseChannel.action_browse_episode_with_filter(self,'http://adserver.adtechus.com')
 
 
 
