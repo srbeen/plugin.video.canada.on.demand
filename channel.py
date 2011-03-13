@@ -16,7 +16,7 @@ class ChannelRegistry(object):
         """
         sn = channel_class.short_name
         if sn in self.channels:
-            raise Exception("a channel with the short_name '%s' is already registered.")
+            raise Exception("a channel with the short_name '%s' is already registered."%sn)
         
         self.channels[channel_class.short_name] = channel_class
         

@@ -149,9 +149,9 @@ def get_page(url, retry_limit=4):
     fetch a url, damnit.
     
     """
-    
+
     retries = 0
-	
+
     while retries < retry_limit:
         logging.debug("fetching %s" % (url,))
         try:            
@@ -168,11 +168,11 @@ def get_stone_soup(url):
     return BeautifulStoneSoup(get_page(url))
 
 
-def urlencode(string):
+def urlquoteval(string):
     """ 
     encodes a querystring (or portion) (mostly space to %20)
     """
-    return urllib.urlencode(string)
+    return urllib.quote(string)
 
 def urldecode(query):
     """
