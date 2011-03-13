@@ -13,4 +13,7 @@
 
 0.1.0 - major: theplatformbase suprclass, CBC fix
 
-0.1.1 - YTV class(ThePlatformBase)
+0.1.1 - YTV, TreehousTV classes(ThePlatformBase) with improvements to backend:
+	- removed the StoneSoup processing of Canwest XML responses and migrated to common &format=SMIL parsing ;
+	- folded action_browse_episode into base ThePlatform class (easier for maintenance..)
+

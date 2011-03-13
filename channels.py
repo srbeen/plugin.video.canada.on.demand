@@ -130,6 +130,15 @@ class ThePlatformBaseChannel(BaseChannel):
         return rels
 
 
+    def action_root(self):
+        logging.debug('ThePlatformBaseChannel::action_root')
+        parent_id = self.args['entry_id'] # this should be None from @classmethod
+        categories = self.get_categories(parent_id)# and root=true
+        for cat in categories:
+            self.plugin.add_list_item(cat)
+        self.plugin.end_list()
+
+
     def action_browse(self):
         """
         Handles the majority of the navigation.
@@ -149,12 +158,53 @@ class ThePlatformBaseChannel(BaseChannel):
         self.plugin.end_list()
 
 
-    def action_root(self):
-        logging.debug('ThePlatformBaseChannel::action_root')
-        parent_id = self.args['entry_id'] # this should be None from @classmethod
-        categories = self.get_categories(parent_id)# and root=true
-        for cat in categories:
-            self.plugin.add_list_item(cat)
+    def action_browse_episode(self):
+        url = 'http://release.theplatform.com/content.select?&pid=%s&format=SMIL&mbr=true' % (self.args['remote_PID'],)
+        soup = get_soup(url)
+        logging.debug("SOUP: %s" % (soup,))
+        
+
+        for i, ref in enumerate(soup.findAll('ref')):
+            base_url = ''
+            playpath = None
+
+            if ref['src'].startswith('rtmp://'): #all other channels type of SMIL
+            #the meta base="http:// is actually the frefix to an adserver
+                try:
+                    base_url, playpath = decode_htmlentities(ref['src']).split('<break>', 1) #<break>
+                except ValueError:
+                    base_url = decode_htmlentities(ref['src'])
+                    playpath = None
+                logging.debug('all other channels type of SMIL  base_url=%s  playpath=%s'%(base_url, playpath))
+            else:
+                if soup.meta['base'].startswith('rtmp://'): #CBC type of SMIL
+                    base_url = decode_htmlentities(soup.meta['base'])
+                    playpath = ref['src']
+                    logging.debug('CBC type of SMIL  base_url=%s  playpath=%s'%(base_url, playpath))
+                else:
+                    continue
+
+            qs = None
+            try:
+                base_url, qs = base_url.split("?",1)
+            except ValueError:
+                base_url = base_url
+                qs = None
+
+            logging.debug({'base_url': base_url, 'playpath': playpath, 'qs': qs, })
+
+            clip_url = base_url
+            if playpath:
+                clip_url += playpath
+            if qs:
+                clip_url += "?" + qs
+
+            data = {}
+            data.update(self.args)
+            data['Title'] = self.args['Title']# + " clip %s" % (i+1,)
+            data['clip_url'] = clip_url
+            data['action'] = 'play'
+            self.plugin.add_list_item(data, is_folder=False)
         self.plugin.end_list()
 
 
@@ -334,7 +384,7 @@ class CanwestBaseChannel(ThePlatformBaseChannel):
     PID = None
     root_depth = 1
 
-    def get_categories_json(self):#,arg):
+    def get_categories_json(self,arg):
         return ThePlatformBaseChannel.get_categories_json(self) # + '&query=ParentIDs|%s'%arg
 
     def get_releases_json(self,arg='0'):
@@ -362,53 +412,10 @@ class CanwestBaseChannel(ThePlatformBaseChannel):
             """
         return categories
 
-    def action_browse_episode(self):
-        self.action_browse_episode_with_filter('http://ad.ca.doubleclick')
-
-    def action_browse_episode_with_filter(self, ads_start_url):
-        #url = "http://release.theplatform.com/content.select?format=SMIL&mbr=true&pid=%s" % (self.args['remote_PID'],)
-        url= 'http://release.theplatform.com/content.select?pid=%s&UserName=Unknown&Embedded=True&Portal=History&Tracking=True'%(self.args['remote_PID'],)
-        logging.debug('action_browse_episode: url=%s'%url)
-        soup = get_stone_soup(url)
-        logging.debug("StoneSOUP: %s" % (soup,))
-
-        #example: http://release.theplatform.com/content.select?pid=LIWB_K840fwnU_3_YC_U0WEps6m5tFQ0&UserName=Unknown&Embedded=True&Portal=History&Tracking=True
-        for i, urltag in enumerate(soup.findAll(name='url')):
-            logging.debug('i=%s, urltag=%s'%(i,urltag))
-            clip_url = decode_htmlentities(urltag.contents[0])
-            if clip_url.startswith(ads_start_url):
-                logging.debug("Skipping Ad: %s" % (clip_url,))
-                continue # skip ads
-
-            qs = None
-            playpath = None
-            if '<break>' in clip_url:
-                clip_url, playpath = clip_url.split("<break>",1)
-
-            if "?" in clip_url:
-                clip_url, qs = clip_url.split("?", 1)
-
-            if playpath:
-                clip_url += playpath
-
-            if qs:
-                clip_url += "?" + qs
-
-
-            data = {}
-            data.update(self.args)
-            data['Title'] = self.args['Title']
-            data['clip_url'] = clip_url
-            data['action'] = 'play'
-            self.plugin.add_list_item(data, is_folder=False)
-        self.plugin.end_list()
-
 
     #override ThePlatFormbase so ?querystring isn't included in playpath 
     #this could be temp-only, actually. paypath doesn't seem to care about extra parameters
     def action_play(self):
-        #rtmp://cp68811.edgefcs.net/ondemand/?auth=dbEa5aUbNbNaYasbMcgdub9aVaOatcfbraO-bnExkl-4q-d9i-8nrEJoTnwC5N9&amp;aifp=1234&amp;slist=Canwest_Broadcast_Entertainment/ playpath=Canwest_Broadcast_Entertainment/History_Ancients_S1_Ep1004_V2 swfurl=http://www.history.ca/video/cwp/swf/flvPlayer.swf swfvfy=true
-        #rtmp://cp68811.edgefcs.net/ondemand?ovpfv=2.1.4&auth=dbEcOb.dad3dgdddiaOdubsdlcPcEbTbxcZ-bnExxk-4q-d9i-1onGAqPqCF0P9&aifp=1234&slist=Canwest_Broadcast_Entertainment/ playpath=Canwest_Broadcast_Entertainment/History_Ancients_S1_Ep1006?auth=dbEcOb.dad3dgdddiaOdubsdlcPcEbTbxcZ-bnExxk-4q-d9i-1onGAqPqCF0P9&aifp=1234&slist=Canwest_Broadcast_Entertainment/ swfurl=http://www.history.ca/video/cwp/swf/flvPlayer.swf swfvfy=true
         self.plugin.set_stream_url(transform_stream_url(self.args['clip_url'], self.swf_url, playpath_qs=False))
 
 
@@ -420,7 +427,7 @@ class GlobalTV(CanwestBaseChannel):
     #swf_url = 'http://www.globaltv.com/video/swf/flvPlayer.swf'
 
     def get_categories_json(self,arg):
-        url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/Global%20Video%20Centre' #urlencode
+        url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/Global%20Video%20Centre' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
 
@@ -437,7 +444,7 @@ class HistoryTV(CanwestBaseChannel):
     swf_url = 'http://www.history.ca/video/cwp/swf/flvPlayer.swf'
 
     def get_categories_json(self,arg):
-        url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/History%20Player%20-%20Video%20Center' #urlencode
+        url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/History%20Player%20-%20Video%20Center' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
 
@@ -454,7 +461,7 @@ class FoodNetwork(CanwestBaseChannel):
     #swf_url = 'http://webdata.globaltv.com/global/canwestPlayer/swf/4.1/flvPlayer.swf'
 
     def get_categories_json(self,arg):
-        url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/FOODNET%20Player%20-%20Video%20Centre' #urlencode
+        url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/FOODNET%20Player%20-%20Video%20Centre' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
 
@@ -471,7 +478,7 @@ class HGTV(CanwestBaseChannel):
     #swf_url = 'http://www.hgtv.ca/includes/cwp/swf/flvPlayer.swf'
 
     def get_categories_json(self,arg):
-        url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/HGTV%20Player%20-%20Video%20Center' #urlencode
+        url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/HGTV%20Player%20-%20Video%20Center' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
 
@@ -488,7 +495,7 @@ class Showcase(CanwestBaseChannel):
     #swf_url = 'http://www.showcase.ca/video/swf/flvPlayer.swf'
 
     def get_categories_json(self,arg):
-        url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/Showcase%20Video%20Centre' #urlencode
+        url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/Showcase%20Video%20Centre' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
 
@@ -505,7 +512,7 @@ class SliceTV(CanwestBaseChannel):
     #swf_url = 'http://www.slice.ca/includes/cwp/swf/flvPlayer.swf'
 
     def get_categories_json(self,arg):
-        url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/Slice%20Player%20-%20New%20Video%20Center' #urlencode
+        url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/Slice%20Player%20-%20New%20Video%20Center' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
 
@@ -522,7 +529,7 @@ class TVTropolis(CanwestBaseChannel):
     #swf_url = 'http://www.tvtropolis.com/swf/cwp/flvPlayer.swf'
 
     def get_categories_json(self):
-        url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/TVTropolis%20Player%20-%20Video%20Center' #urlencode
+        url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/TVTropolis%20Player%20-%20Video%20Center' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
 
@@ -539,7 +546,7 @@ class diyNet(CanwestBaseChannel):
     #swf_url = 'http://www.diy.ca/Includes/cwp/swf/flvPlayer.swf'
 
     def get_categories_json(self,arg):
-        url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/DIY%20Network%20-%20Video%20Centre' #urlencode
+        url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/DIY%20Network%20-%20Video%20Centre' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
 
@@ -556,19 +563,18 @@ class YTV(CanwestBaseChannel):
     PID = 't4r_81mEo8zCyfYh_AKeHJxmZleq26Vx'
     swf_url = 'http://www.ytv.com/PDK/swf/flvPlayer.swf'
     root_depth = 0
+    
 
-    def get_categories_json(self,arg):
-        url = CanwestBaseChannel.get_categories_json(self) #urlencode
-        logging.debug('get_categories_json: %s'%url)
-        return url
+class TreehouseTV(CanwestBaseChannel):
+    short_name = 'treehouse'
+    long_name = 'Treehouse TV'
+    PID = '6FTFywmxdSd_HKMYKQGFwsAf8rkcdn9R'
+    swf_url = 'http://mediaparent.treehousetv.com/swf/flvPlayer.swf'
+    root_depth = 0
 
-    def get_releases_json(self,arg='0'):
-        url = '%s' % CanwestBaseChannel.get_releases_json(self,arg)
-        logging.debug('get_releases_json: %s'%url)
-        return url
-
-    def action_browse_episode(self):
-        CanwestBaseChannel.action_browse_episode_with_filter(self,'http://adserver.adtechus.com')
+    #not required, splitting the url into a playpath= argumentwith transform_url  still works!
+    #def action_play(self):
+    #    self.plugin.set_stream_url( self.args['clip_url'] + ' swfurl=%s swfvfy=true'%self.swf_url)
 
 
 
@@ -639,13 +645,13 @@ class CBCChannel(ThePlatformBaseChannel):
         """
         return categories
 
-
+    """
     #is folding-back into ThePlatformBase even possible??
     def action_browse_episode(self):
-        """
+        " ""
         Handles browsing the clips within an episode.
-
-        """
+ 
+        " ""
         
         url = 'http://release.theplatform.com/content.select?&pid=%s&format=SMIL&mbr=true' % (self.args['remote_PID'],)
         soup = get_soup(url)
@@ -676,7 +682,7 @@ class CBCChannel(ThePlatformBaseChannel):
             data['action'] = 'play'
             self.plugin.add_list_item(data, is_folder=False)
         self.plugin.end_list()
-
+    """
 
     def action_root(self):
         logging.debug('CBCChannel::action_root')
