@@ -12,8 +12,8 @@ from channels import *
 __plugin__ = "Canada On Demand"
 __author__ = 'Andre,Renaud  {andrepleblanc,renaudtrudel}@gmail.com'
 __url__ = 'http://github.com/andrepl/plugin.video.canada.on.demand/'
-__date__ = '03-11-2011'
-__version__ = '0.1.1'
+__date__ = '03-15-2011'
+__version__ = '0.1.2'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
 
