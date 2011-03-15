@@ -14,7 +14,7 @@ class ThePlatformBaseChannel(BaseChannel):
     #root_url = None
     base_url = None
     PID = None
-    category_cache_timeout = 1 # value is in seconds. so 5 minutes.
+    category_cache_timeout = 60 # value is in seconds. so 5 minutes.
 
     def get_categories_json(self):
         return self.base_url + 'getCategoryList?PID=%s'%(self.PID) + \
