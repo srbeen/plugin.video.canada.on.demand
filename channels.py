@@ -241,6 +241,7 @@ class CTVBaseChannel(BaseChannel):
         url = data
         if self.args.get('use_rtmp') and url.startswith("rtmpe://"):
             url = "rtmp://" + url[8:]
+            url = url.replace(" swfvfy=true","")
         self.plugin.set_stream_url(url)
 
 
@@ -252,7 +253,7 @@ class CTVBaseChannel(BaseChannel):
         if levelclass == '4': # Browsing at the clip level
                               # We want to build a context menu
                               # Item to allow 're-browsing' this directory
-                              # with forced rtmpe urls.
+                              # with forced rtmp urls.
             menu_args = {}
             menu_args.update(self.args)
 
@@ -784,7 +785,7 @@ class CTVNews(CTVBaseChannel):
     base_url = 'http://watch.ctv.ca/news/AJAX/'
     short_name = 'ctvnews'
     long_name = 'CTV News'
-    swf_url = 'http://watch.ctv.ca/news/Flash/player.swf?themeURL=http://watch.ctv.ca/news/themes/CTVNews/player/theme.aspx',
+    swf_url = 'http://watch.ctv.ca/news/Flash/player.swf?themeURL=http://watch.ctv.ca/news/themes/CTVNews/player/theme.aspx'
 
 
 class Discovery(CTVBaseChannel):

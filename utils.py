@@ -11,7 +11,41 @@ from htmlentitydefs import name2codepoint as n2cp
 class CTVException(Exception):
     pass
 
+class ParseException(Exception):
+    pass
 
+
+class URLParser(object):
+    """
+    Unused, incomplete replacement for transform_stream_url
+    """
+    url_re = re.compile(r"(?P<scheme>\w+)://(?P<netloc>[\w\d\.]+)/(?P<app_dir>\w+)/(?P<playpath>[^\?]+)(?:\?(?P<querystring>.*))?")
+    
+    def __init__(self, swf_url=None, swf_verify=False, \
+                 force_rtmp=False, playpath_qs=True):
+
+        self.swf_url = swf_url
+        self.swf_verify = swf_verify
+        self.force_rtmp = force_rtmp
+        self.playpath_qs=True
+        
+    def parse(self, url):
+        self.input_url = url
+        match = self.url_re.match(url)
+        if not match:
+            raise ParseException("Couldn't parse input url: %s" % (url, ))        
+        
+        self.url_parts = match.groupdict()
+
+        if self.force_rtmp and self.url_parts['scheme'] == 'rtmpe':
+            self.url_parts['scheme'] = 'rtmp'            
+        
+        return self.url_parts
+    
+    def get_url(self):
+        pass
+    
+        
 def transform_stream_url(url, swf_url=None, playpath_qs=True):
     logging.debug("ORIGINAL URL: %s"%(url,))
     if swf_url:
