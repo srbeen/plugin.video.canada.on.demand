@@ -105,6 +105,8 @@ class OnDemandPlugin(object):
         'Title' is also required, anything *should* be optional
         
         """
+        if context_menu_items is None:
+            context_menu_items = []
         info.setdefault('Thumb', 'None')
         info.setdefault('Icon', info['Thumb'])
         if 'Rating' in info:
@@ -119,7 +121,7 @@ class OnDemandPlugin(object):
         
         if not is_folder:
             li.setProperty("IsPlayable", "true") 
-            
+            context_menu_items.append(("Queue Item", "Action(Queue)"))
         li.setInfo(type='Video', infoLabels=dict((k, unicode(v)) for k, v in info.iteritems()))
         
         # Add Context Menu Items
