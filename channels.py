@@ -1,17 +1,10 @@
 import time
 import simplejson
-from channel import BaseChannel, ChannelException,ChannelMetaClass
+from channel import BaseChannel, ChannelException,ChannelMetaClass, STATUS_BAD, STATUS_GOOD, STATUS_UGLY
 from utils import *
 
 class ThePlatformBaseChannel(BaseChannel):
     is_abstract = True
-    #root_url = "getCategoryList?PID=%s&field=fullTitle&field=treeOrder&field=hasChildren&field=customData&field=description&field=parentID&field=title&field=ID&customField=AdCategory&customField=SortOrder&customField=Sub-Event&customField=Segment&customField=Producers&customField=Organizations&customField=LiveOnDemand&customField=EpisodeNumber&customField=ClipType&customField=Characters&customField=BylineCredit&customField=AudioVideo&customField=Aired&customField=CBCPersonalities&customField=People&customField=Event&customField=Region&customField=Sport&customField=SeasonNumber&customField=MaxClips&customField=SortField&customField=Show&customField=Genre&customField=CreatedBefore&customField=CreatedAfter&customField=Account&customField=GroupOrder&customField=GroupLevel&customField=IsDynamicPlaylist&customField=Keywords&customField=backgroundImage&query=FullTitles|News&callback=CBC.APP.UberPlayer.onGetCategoriesByTitle&callback=CBC.APP.UberPlayer.onGetCategoriesByParentID"
-
-    #def get_root_url(self):
-    #    return self.root_url % (self.PID,)
-    #is_abstract = True
-    #base_url = 'http://feeds.theplatform.com/ps/JSON/PortalService/2.2/'
-    #root_url = None
     base_url = None
     PID = None
     category_cache_timeout = 60 # value is in seconds. so 5 minutes.
@@ -94,9 +87,6 @@ class ThePlatformBaseChannel(BaseChannel):
                             data.update({dict['title']: dict['value']},) #urlquoteval(dict['value'])
             logging.debug(data)
                 
-            #logging.debug('hasChildren%s or hasReleases%s'%(c['hasChildren'],c['hasReleases']))
-            #if c['hasReleases'] or c['hasChildren']:
-            #    data.update({'remote_url': '',})
             cats.append(data)
             
         logging.debug("get_categories cats=%s"%cats)
@@ -232,6 +222,7 @@ class ThePlatformBaseChannel(BaseChannel):
 
 
 class CTVBaseChannel(BaseChannel):
+    status = STATUS_BAD
     is_abstract = True
     root_url = 'VideoLibraryWithFrame.aspx'
 
@@ -391,26 +382,31 @@ class CanwestBaseChannel(ThePlatformBaseChannel):
     def get_releases_json(self,arg='0'):
         return ThePlatformBaseChannel.get_releases_json(self) + '&query=CategoryIDs|%s'%arg['entry_id']
 
+    def children_with_releases(self, categorylist, cat):
+        logging.debug("Called Children_with_releases")
+        children = [c for c in categorylist \
+                    if c['depth'] == cat['depth'] + 1 \
+                    and c['fullTitle'].startswith(cat['fullTitle'] + "/") \
+                    and (c['hasReleases'] or self.children_with_releases(categorylist, c))]
+        return children
+            
+        
     def get_child_categories(self, categorylist, parent_id):
+        
+        show_empty = self.plugin.get_setting('show_empty_cat') == 'true'
         if parent_id is None:
-            categories = [c for c in categorylist \
-                          if c['depth'] == self.root_depth
-                          and (
-                              self.plugin.get_setting('show_empty_cat') == True
-                              or (c['hasReleases'] or c['hasChildren'])
-                          )]
+            cat = [c for c in categorylist if c['depth'] == self.root_depth - 1][0]
         else:
             cat = [c for c in categorylist if c['ID'] == int(parent_id)][0]
-            categories = [c for c in categorylist \
-                        if c['fullTitle'].startswith(cat['fullTitle'] + "/") 
-                        and c['depth'] == cat['depth'] + 1 
-                        ]
-            """
-                      and (
-                          self.plugin.get_setting('show_empty_cat') == True
-                          or (c['hasReleases'] or c['hasChildren'])
-                      )]
-            """
+        
+        logging.debug("SHOW_EMPTY: %s" % (show_empty,))
+        if show_empty:
+            categories = [c for c in categorylist if c['depth'] == cat['depth'] + 1 \
+                          and c['fullTitle'].startswith(cat['fullTitle'] + "/")]
+            
+        else:
+            categories = self.children_with_releases(categorylist, cat)
+
         return categories
 
 
@@ -808,6 +804,7 @@ class Space(CTVBaseChannel):
     swf_url = "http://watch.spacecast.com/Flash/player.swf?themeURL=http://watch.spacecast.com/themes/Space/player/theme.aspx"
 
 class MuchMusic(CTVBaseChannel):
+    status = STATUS_UGLY
     short_name = 'muchmusic'
     long_name = 'Much Music'
     base_url = 'http://watch.muchmusic.com/AJAX/'

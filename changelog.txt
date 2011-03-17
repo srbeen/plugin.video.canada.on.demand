@@ -17,3 +17,13 @@
 	- removed the StoneSoup processing of Canwest XML responses and migrated to common &format=SMIL parsing ;
 	- folded action_browse_episode into base ThePlatform class (easier for maintenance..)
 
+0.1.2 - improved theplatform caching
+      - added force-rtmp option
+      
+0.1.3 - new artwork
+
+0.1.4 - Canwest channels now properly hide empty categories
+      - added context menu entry to queue video clips
+      - added plugin setting to hide channels which use
+        streams that are poorly supported.
+        

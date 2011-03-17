@@ -19,33 +19,94 @@ class URLParser(object):
     """
     Unused, incomplete replacement for transform_stream_url
     """
-    url_re = re.compile(r"(?P<scheme>\w+)://(?P<netloc>[\w\d\.]+)/(?P<app_dir>\w+)/(?P<playpath>[^\?]+)(?:\?(?P<querystring>.*))?")
+    
+    url_re = re.compile(r"(?P<scheme>\w+)://(?P<netloc>[\w\d\.]+)/(?P<app>\w+)/(?P<playpath>[^\?]+)(?:\?(?P<querystring>.*))?")
     
     def __init__(self, swf_url=None, swf_verify=False, \
-                 force_rtmp=False, playpath_qs=True):
+                 force_rtmp=False, playpath_qs=False, 
+                 is_live=False):
 
         self.swf_url = swf_url
         self.swf_verify = swf_verify
         self.force_rtmp = force_rtmp
-        self.playpath_qs=True
+        self.playpath_qs=playpath_qs
+        self.is_live = is_live
         
-    def parse(self, url):
+    def __call__(self, url):
         self.input_url = url
-        match = self.url_re.match(url)
+        self.parse()
+        self.clean()
+        self.generate_url()
+        return self.output_url
+    
+    def parse(self):
+        match = self.url_re.match(self.input_url)
         if not match:
             raise ParseException("Couldn't parse input url: %s" % (url, ))        
+        self.data = match.groupdict()    
         
-        self.url_parts = match.groupdict()
+    def clean_scheme(self, scheme):
+        if scheme == 'rtmpe' and self.force_rtmp:
+            scheme = 'rtmp'
+        return scheme
+        
+    def clean_app(self, app):
+        if 'live' in app:
+            self.is_live = True
+        return app
+    
+    def clean_playpath(self, playpath):
+        basename, extension = os.path.splitext(playpath)
+        if extension.lower() not in ('.flv',''):
+            playpath = "%s:%s%s" % (extension[1:], basename, extension)
+            
+        if self.playpath_qs and self.data['querystring']:
+            playpath += "?%(querystring)s" % self.data
+            
+        return playpath
+    
+    def clean(self):        
+        for key in ('querystring', 'playpath', 'scheme', 'netloc', 'app'):
+            cleanfunc = getattr(self, 'clean_%s' % (key,), lambda v: v)
+            self.data[key] = cleanfunc(self.data[key])            
+        
+    def get_base_url(self):
+        print self.data
+        url = "%(scheme)s://%(netloc)s/%(app)s?ovpfv=2.1.4" % self.data
+        if self.data['querystring']:
+            url += "&%(querystring)s" % self.data
+        return url
+    
+    def get_url_params(self):
+        params = [('playpath', self.data['playpath']),]
+        
+        if self.swf_url:
+            params.append(('swfurl', self.swf_url))
+        
+        if self.swf_verify:
+            params.append(('swfvfy','true'))
 
-        if self.force_rtmp and self.url_parts['scheme'] == 'rtmpe':
-            self.url_parts['scheme'] = 'rtmp'            
+        if self.is_live:
+            params.append(('live','true'))
+            
+        return params
         
-        return self.url_parts
     
-    def get_url(self):
-        pass
+    def generate_url(self):
+        base_url = self.get_base_url()
+        
+        params = self.get_url_params()
+        if params:
+            base_url += " %s" % (" ".join(["%s=%s" % item for item in params]))
+        self.output_url = base_url
     
         
+class TestParser(URLParser):
+    def clean_netloc(self, netloc):
+        if 'edgefcs.net' in netloc:
+            return 'r11111.edgefcs.net'
+        return netloc
+    
 def transform_stream_url(url, swf_url=None, playpath_qs=True):
     logging.debug("ORIGINAL URL: %s"%(url,))
     if swf_url:

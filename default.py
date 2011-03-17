@@ -12,8 +12,8 @@ from channels import *
 __plugin__ = "Canada On Demand"
 __author__ = 'Andre,Renaud  {andrepleblanc,renaudtrudel}@gmail.com'
 __url__ = 'http://github.com/andrepl/plugin.video.canada.on.demand/'
-__date__ = '03-16-2011'
-__version__ = '0.1.3'
+__date__ = '03-17-2011'
+__version__ = '0.1.4'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
 
@@ -35,6 +35,8 @@ class OnDemandPlugin(object):
         and being subclasses of BaseChannel.
         
         """
+        minimum = int(self.get_setting("worst_channel_support"))
+        print "MINIMUM:",minimum
         for channel_code, channel_class in sorted(ChannelMetaClass.registry.channels.iteritems()):
             info = channel_class.get_channel_entry_info()
             logging.debug("CHANNEL INFO: %s" %(info,))
@@ -48,7 +50,8 @@ class OnDemandPlugin(object):
             except ChannelException:
                 logging.warn("Couldn't Find Channel Icon for %s" % (channel_code,))
             
-            self.add_list_item(info)
+            if channel_class.status >= minimum:
+                self.add_list_item(info)
         self.end_list()
         
     def set_stream_url(self, url, info=None):

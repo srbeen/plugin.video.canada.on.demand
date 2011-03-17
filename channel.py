@@ -3,6 +3,8 @@ Meta and Base Classes for basic Channel Support
 
 """
 
+STATUS_UGLY, STATUS_BAD, STATUS_GOOD = 0, 1, 2
+
 class ChannelRegistry(object):
     
     def __init__(self):
@@ -66,6 +68,7 @@ class BaseChannel(object):
     root_url = ''
     swf_url = None
     is_abstract = True
+    status = STATUS_GOOD
     
     __metaclass__ = ChannelMetaClass
 
@@ -82,7 +85,7 @@ class BaseChannel(object):
         root level.
         
         """
-        return {
+        info = {
             'Title': self.long_name,
             'Thumb': self.icon_path,
             'action': 'browse',
@@ -90,6 +93,13 @@ class BaseChannel(object):
             'channel': self.short_name,
         }
     
+        if self.status == STATUS_BAD:
+            info['Title'] += " [Bad]"
+            
+        if self.status == STATUS_UGLY:
+            info['Title'] += " [Ugly]"
+        
+        return info
     
     def action_browse(self):
         rurl = self.get_url(self.args['remote_url'])
