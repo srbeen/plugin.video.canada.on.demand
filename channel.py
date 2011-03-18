@@ -69,7 +69,7 @@ class BaseChannel(object):
     swf_url = None
     is_abstract = True
     status = STATUS_GOOD
-    
+    default_action = 'browse'
     __metaclass__ = ChannelMetaClass
 
     
@@ -88,7 +88,7 @@ class BaseChannel(object):
         info = {
             'Title': self.long_name,
             'Thumb': self.icon_path,
-            'action': 'browse',
+            'action': self.default_action,
             'remote_url': None,
             'channel': self.short_name,
             'use_rtmp': 1,

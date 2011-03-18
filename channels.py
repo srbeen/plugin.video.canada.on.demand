@@ -236,9 +236,9 @@ class CTVBaseChannel(BaseChannel):
     
     def action_play_clip(self):
         rurl = "http://esi.ctv.ca/datafeed/urlgenjs.aspx?vid=%s" % (self.args['ClipId'],)
-        
         parse = URLParser(swf_url=self.swf_url, force_rtmp=self.args.get('use_rtmp', ''))
         url = parse(get_page(rurl).read().strip()[17:].split("'",1)[0])
+        logging.debug("Playing Stream: %s" % (url,))
         self.plugin.set_stream_url(url)
 
 
@@ -487,6 +487,62 @@ class GlobalNews(CanwestBaseChannel):
     def get_categories_json(self, arg):
         return CanwestBaseChannel.get_categories_json(self, arg) + '&query=CustomText|PlayerTag|' + self.PlayerTag
     
+    
+class CTVLocalNews(CTVBaseChannel):
+    short_name = 'ctvlocal'
+    long_name = 'CTV Local News'
+    default_action = 'root'
+    
+    local_channels = [
+        ('British Columbia', 'ctvbc.ctv.ca'),
+        ('Calgary', 'calgary.ctv.ca'),
+        ('Edmonton', 'edmonton.ctv.ca'),
+        ('Montreal', 'montreal.ctv.ca'),
+        ('Northern Ontario', 'northernontario.ctv.ca'),
+        ('Ottawa', 'ottawa.ctv.ca'),
+        ('Regina', 'regina.ctv.ca'),
+        ('Saskatoon', 'saskatoon.ctv.ca'),
+        ('Southwestern Ontario', 'swo.ctv.ca'),
+        ('Toronto', 'toronto.ctv.ca'),
+        ('Winnipeg', 'winnipeg.ctv.ca'),
+    ]
+
+        
+    def action_root(self):
+        for channel, domain in self.local_channels:
+            self.plugin.add_list_item({
+                'Title': channel, 
+                'action': 'browse',
+                'channel': self.short_name, 
+                'entry_id': None,
+                'local_channel': channel,
+                'remote_url': domain,
+                'use_rtmp': 1
+            })
+        self.plugin.end_list()
+
+        
+    def action_browse(self):
+        soup = get_soup("http://%s/" % (self.args['remote_url'],))
+        for script in soup.findAll('script'):
+            try:
+                txt = script.contents[0].strip()
+            except:
+                continue
+            
+            if txt.startswith("VideoPlaying["):
+                txt = txt.split("{",1)[1].rsplit("}")[0]
+                logging.debug(txt)
+                data = {}
+                data.update(self.args)
+                data.update(parse_javascript_object(txt))
+                data.update({
+                    'action': 'play_clip',
+                    'remote_url': data['ClipId'],
+                })
+                self.plugin.add_list_item(data, is_folder=False)
+        self.plugin.end_list()
+        
 class HistoryTV(CanwestBaseChannel):
     short_name = 'history'
     long_name = 'History TV'

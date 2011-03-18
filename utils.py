@@ -149,6 +149,26 @@ def transform_stream_url(url, swf_url=None, playpath_qs=True):
     return res
 
 
+def dequote(s):
+    if s[0] in ('"', "'") and s[0] == s[-1]:
+        s = s[1:-1].replace('\\' + s[0], s[0])
+        return s
+    else:
+        try:
+            return int(s)
+        except:
+            try:
+                return float(s)
+            except:
+                return s
+        
+    
+def parse_javascript_object(objs):
+    PATTERN = re.compile(r'''((?:[^,"']|"[^"]*"|'[^']*')+)''')
+    pairs = [p.strip().split(":", 1) for p in PATTERN.split(objs) if p.strip() and p.strip() != ',']
+    return dict([(k, dequote(v)) for k, v in pairs])
+    
+
 def qasplit(chars, sep=",", quote="'"):
     """ 
     Quote aware split 

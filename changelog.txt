@@ -36,3 +36,5 @@
         context menu item now switches it off.
 	
 0.1.8 - Added Global BC which was overlooked in 0.1.7
+
+0.1.9 - Added CTV Local News.
