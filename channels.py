@@ -25,11 +25,14 @@ class ThePlatformBaseChannel(BaseChannel):
         return simplejson.loads(body)
 
 
+    def get_cache_key(self):
+        return self.short_name
+    
     def get_cached_categories(self, parent_id):
         
         categories = None
 
-        fpath = os.path.join(self.plugin.get_cache_dir(), 'canada.on.demand.%s.categories.cache' % (self.short_name,))
+        fpath = os.path.join(self.plugin.get_cache_dir(), 'canada.on.demand.%s.categories.cache' % (self.get_cache_key(),))
         try:
             if os.path.exists(fpath):
                 data = simplejson.load(open(fpath))
@@ -100,6 +103,7 @@ class ThePlatformBaseChannel(BaseChannel):
         logging.debug('get_releases url=%s'%url)
         
         data = self.parse_callback(get_page(url).read())
+        
         rels = []
         for item in data['items']:
             logging.debug(item)
@@ -123,6 +127,8 @@ class ThePlatformBaseChannel(BaseChannel):
     def action_root(self):
         logging.debug('ThePlatformBaseChannel::action_root')
         parent_id = self.args['entry_id'] # this should be None from @classmethod
+        if parent_id == 'None':
+            parent_id = None
         categories = self.get_categories(parent_id)# and root=true
         for cat in categories:
             self.plugin.add_list_item(cat)
@@ -380,7 +386,7 @@ class CanwestBaseChannel(ThePlatformBaseChannel):
         return ThePlatformBaseChannel.get_categories_json(self) # + '&query=ParentIDs|%s'%arg
 
     def get_releases_json(self,arg='0'):
-        return ThePlatformBaseChannel.get_releases_json(self) + '&query=CategoryIDs|%s'%arg['entry_id']
+        return ThePlatformBaseChannel.get_releases_json(self) + '&query=CategoryIDs|%s'% (self.args['entry_id'],)
 
     def children_with_releases(self, categorylist, cat):
         logging.debug("Called Children_with_releases")
@@ -397,6 +403,7 @@ class CanwestBaseChannel(ThePlatformBaseChannel):
         if parent_id is None:
             cat = [c for c in categorylist if c['depth'] == self.root_depth - 1][0]
         else:
+            logging.debug("ParentID: %s [%s]" % (parent_id, type(parent_id)))
             cat = [c for c in categorylist if c['ID'] == int(parent_id)][0]
         
         logging.debug("SHOW_EMPTY: %s" % (show_empty,))
@@ -423,6 +430,7 @@ class GlobalTV(CanwestBaseChannel):
     PID = 'W_qa_mi18Zxv8T8yFwmc8FIOolo_tp_g'
     #swf_url = 'http://www.globaltv.com/video/swf/flvPlayer.swf'
 
+    
     def get_categories_json(self,arg):
         url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/Global%20Video%20Centre' #urlencode
         logging.debug('get_categories_json: %s'%url)
@@ -433,7 +441,49 @@ class GlobalTV(CanwestBaseChannel):
         logging.debug('get_releases_json: %s'%url)
         return url
 
-
+class GlobalNews(CanwestBaseChannel):
+    short_name = 'globalnews'
+    long_name = 'Global News'
+    PID = 'M3FYkz1jcJIVtzmoB4e_ZQfqBdpZSFNM'
+    local_channels = [
+        ('Global News','z/Global%20News%20Player%20-%20Main'),
+        ('Global National','z/Global%20Player%20-%20The%20National%20VC'),
+        ('Toronto', 'z/Global%20ON%20Player%20-%20Video%20Center'),
+        ('Calgary', 'z/Global%20CGY%20Player%20-%20Video%20Center'),
+        ('Edmonton', 'z/Global%20EDM%20Player%20-%20Video%20Center'),
+        ('Lethbridge', 'z/Global%20LTH%20Player%20-%20Video%20Center'),
+        ('Maritimes', 'z/Global%20MAR%20Player%20-%20Video%20Center'),
+        ('Montreal', 'z/Global%20QC%20Player%20-%20Video%20Center'),
+        ('Regina', 'z/Global%20REG%20Player%20-%20Video%20Center'),
+        ('Saskatoon', 'z/Global%20SAS%20Player%20-%20Video%20Center'),
+        ('Winnipeg', 'z/Global%20WIN%20Player%20-%20Video%20Center'),
+    ]
+    
+    def get_cache_key(self):
+        return "%s-%s" % (self.short_name, self.args.get('local_channel',''))
+    
+    def action_browse(self):
+        self.PlayerTag = dict(self.local_channels)[self.args['local_channel']]
+        logging.debug("ARGS: %s" % (self.args,))
+        if self.args['entry_id'] is None:
+            return CanwestBaseChannel.action_root(self)
+        return CanwestBaseChannel.action_browse(self)
+        
+    
+    def action_root(self):
+        for channel, ptag in self.local_channels:
+            self.plugin.add_list_item({
+                'Title': channel, 
+                'action': 'browse',
+                'channel': self.short_name, 
+                'entry_id': None,
+                'local_channel': channel
+            })
+        self.plugin.end_list()
+    
+    def get_categories_json(self, arg):
+        return CanwestBaseChannel.get_categories_json(self, arg) + '&query=CustomText|PlayerTag|' + self.PlayerTag
+    
 class HistoryTV(CanwestBaseChannel):
     short_name = 'history'
     long_name = 'History TV'
@@ -443,11 +493,6 @@ class HistoryTV(CanwestBaseChannel):
     def get_categories_json(self,arg):
         url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/History%20Player%20-%20Video%20Center' #urlencode
         logging.debug('get_categories_json: %s'%url)
-        return url
-
-    def get_releases_json(self,arg='0'):
-        url = '%s' % CanwestBaseChannel.get_releases_json(self,arg)
-        logging.debug('get_releases_json: %s'%url)
         return url
 
 
@@ -462,11 +507,6 @@ class FoodNetwork(CanwestBaseChannel):
         logging.debug('get_categories_json: %s'%url)
         return url
 
-    def get_releases_json(self,arg='0'):
-        url = '%s' % CanwestBaseChannel.get_releases_json(self,arg)
-        logging.debug('get_releases_json: %s'%url)
-        return url
-
 
 class HGTV(CanwestBaseChannel):
     short_name = 'hgtv'
@@ -479,10 +519,6 @@ class HGTV(CanwestBaseChannel):
         logging.debug('get_categories_json: %s'%url)
         return url
 
-    def get_releases_json(self,arg='0'):
-        url = '%s' % CanwestBaseChannel.get_releases_json(self,arg)
-        logging.debug('get_releases_json: %s'%url)
-        return url
 
 
 class Showcase(CanwestBaseChannel):
@@ -496,10 +532,7 @@ class Showcase(CanwestBaseChannel):
         logging.debug('get_categories_json: %s'%url)
         return url
 
-    def get_releases_json(self,arg='0'):
-        url = '%s' % CanwestBaseChannel.get_releases_json(self,arg)
-        logging.debug('get_releases_json: %s'%url)
-        return url
+    
 
 
 class SliceTV(CanwestBaseChannel):
@@ -511,11 +544,6 @@ class SliceTV(CanwestBaseChannel):
     def get_categories_json(self,arg):
         url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/Slice%20Player%20-%20New%20Video%20Center' #urlencode
         logging.debug('get_categories_json: %s'%url)
-        return url
-
-    def get_releases_json(self,arg='0'):
-        url = '%s' % CanwestBaseChannel.get_releases_json(self,arg)
-        logging.debug('get_releases_json: %s'%url)
         return url
 
 
@@ -530,11 +558,6 @@ class TVTropolis(CanwestBaseChannel):
         logging.debug('get_categories_json: %s'%url)
         return url
 
-    def get_releases_json(self,arg='0'):
-        url = '%s' % CanwestBaseChannel.get_releases_json(self,arg)
-        logging.debug('get_releases_json: %s'%url)
-        return url
-
 
 class diyNet(CanwestBaseChannel):
     short_name = 'diynet'
@@ -545,11 +568,6 @@ class diyNet(CanwestBaseChannel):
     def get_categories_json(self,arg):
         url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/DIY%20Network%20-%20Video%20Centre' #urlencode
         logging.debug('get_categories_json: %s'%url)
-        return url
-
-    def get_releases_json(self,arg='0'):
-        url = '%s' % CanwestBaseChannel.get_releases_json(self,arg)
-        logging.debug('get_releases_json: %s'%url)
         return url
 
 
