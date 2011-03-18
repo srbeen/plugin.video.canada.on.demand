@@ -34,3 +34,5 @@
 0.1.7 - Implemented in new, more flexible URLParser
       - Defaulted CBC Channels to forced rtmp urls.
         context menu item now switches it off.
+	
+0.1.8 - Added Global BC which was overlooked in 0.1.7

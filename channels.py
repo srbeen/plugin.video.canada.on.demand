@@ -450,7 +450,7 @@ class GlobalNews(CanwestBaseChannel):
     local_channels = [
         ('Global News','z/Global%20News%20Player%20-%20Main'),
         ('Global National','z/Global%20Player%20-%20The%20National%20VC'),
-        ('Toronto', 'z/Global%20ON%20Player%20-%20Video%20Center'),
+        ('BC', 'z/Global%20BC%20Player%20-%20Video%20Center'),
         ('Calgary', 'z/Global%20CGY%20Player%20-%20Video%20Center'),
         ('Edmonton', 'z/Global%20EDM%20Player%20-%20Video%20Center'),
         ('Lethbridge', 'z/Global%20LTH%20Player%20-%20Video%20Center'),
@@ -458,6 +458,7 @@ class GlobalNews(CanwestBaseChannel):
         ('Montreal', 'z/Global%20QC%20Player%20-%20Video%20Center'),
         ('Regina', 'z/Global%20REG%20Player%20-%20Video%20Center'),
         ('Saskatoon', 'z/Global%20SAS%20Player%20-%20Video%20Center'),
+        ('Toronto', 'z/Global%20ON%20Player%20-%20Video%20Center'),
         ('Winnipeg', 'z/Global%20WIN%20Player%20-%20Video%20Center'),
     ]
     
