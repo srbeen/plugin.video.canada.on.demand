@@ -29,3 +29,4 @@
 	
 0.1.5 - Added Full Global News Support
         
+0.1.6 - added global news icon
