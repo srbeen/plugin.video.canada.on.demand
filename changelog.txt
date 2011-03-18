@@ -30,3 +30,7 @@
 0.1.5 - Added Full Global News Support
         
 0.1.6 - added global news icon
+
+0.1.7 - Implemented in new, more flexible URLParser
+      - Defaulted CBC Channels to forced rtmp urls.
+        context menu item now switches it off.

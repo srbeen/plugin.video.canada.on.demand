@@ -23,7 +23,7 @@ class URLParser(object):
     url_re = re.compile(r"(?P<scheme>\w+)://(?P<netloc>[\w\d\.]+)/(?P<app>\w+)/(?P<playpath>[^\?]+)(?:\?(?P<querystring>.*))?")
     
     def __init__(self, swf_url=None, swf_verify=False, \
-                 force_rtmp=False, playpath_qs=False, 
+                 force_rtmp=False, playpath_qs=True, 
                  is_live=False):
 
         self.swf_url = swf_url
@@ -57,7 +57,9 @@ class URLParser(object):
     
     def clean_playpath(self, playpath):
         basename, extension = os.path.splitext(playpath)
-        if extension.lower() not in ('.flv',''):
+        if extension.lower() in ('.flv',''):
+            playpath = basename
+        else:
             playpath = "%s:%s%s" % (extension[1:], basename, extension)
             
         if self.playpath_qs and self.data['querystring']:

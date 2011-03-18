@@ -91,6 +91,7 @@ class BaseChannel(object):
             'action': 'browse',
             'remote_url': None,
             'channel': self.short_name,
+            'use_rtmp': 1,
         }
     
         if self.status == STATUS_BAD:

@@ -205,7 +205,8 @@ class ThePlatformBaseChannel(BaseChannel):
 
 
     def action_play(self):
-        self.plugin.set_stream_url(transform_stream_url(self.args['clip_url'], self.swf_url))
+        parse = URLParser(swf_url=self.swf_url)
+        self.plugin.set_stream_url(parse(self.args['clip_url']))
 
 
     @classmethod
@@ -223,6 +224,7 @@ class ThePlatformBaseChannel(BaseChannel):
             'entry_id': None,
             'channel': self.short_name,
             'force_cache_update': True,
+            'use_rtmp': 0,
         }
 
 
@@ -231,15 +233,14 @@ class CTVBaseChannel(BaseChannel):
     status = STATUS_BAD
     is_abstract = True
     root_url = 'VideoLibraryWithFrame.aspx'
-
+    
     def action_play_clip(self):
         rurl = "http://esi.ctv.ca/datafeed/urlgenjs.aspx?vid=%s" % (self.args['ClipId'],)
-        data = transform_stream_url(get_page(rurl).read().strip()[17:].split("'",1)[0], self.swf_url)
-        url = data
-        if self.args.get('use_rtmp') and url.startswith("rtmpe://"):
-            url = "rtmp://" + url[8:]
-            url = url.replace(" swfvfy=true","")
+        
+        parse = URLParser(swf_url=self.swf_url, force_rtmp=self.args.get('use_rtmp', ''))
+        url = parse(get_page(rurl).read().strip()[17:].split("'",1)[0])
         self.plugin.set_stream_url(url)
+
 
 
     def action_browse(self):
@@ -255,7 +256,7 @@ class CTVBaseChannel(BaseChannel):
             menu_args.update(self.args)
 
             if self.args.get('use_rtmp'):
-                del menu_args['use_rtmp']
+                menu_args['use_rtmp'] = ''
                 menuitem = ('Use Given Urls', 'Container.Update(%s)' % (self.plugin.get_url(menu_args)))
             else:
                 menu_args['use_rtmp'] = 1
@@ -420,7 +421,8 @@ class CanwestBaseChannel(ThePlatformBaseChannel):
     #override ThePlatFormbase so ?querystring isn't included in playpath 
     #this could be temp-only, actually. paypath doesn't seem to care about extra parameters
     def action_play(self):
-        self.plugin.set_stream_url(transform_stream_url(self.args['clip_url'], self.swf_url, playpath_qs=False))
+        parse = URLParser(swf_url=self.swf_url, playpath_qs=False)
+        self.plugin.set_stream_url(parse(self.args['clip_url']))
 
 
 
