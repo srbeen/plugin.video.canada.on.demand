@@ -2,5 +2,5 @@
    <setting id="show_empty_cat" type="bool" label="30000" default="false"/>
    <setting id="http_proxy" type="text" label="30001" default="" />
    <setting id="http_proxy_port" type="text" label="30002" default="" />
-   <setting id="worst_channel_support" type="enum" label="30003" values="Ugly|Bad|Good" default="1" />
+   <setting id="worst_channel_support" type="enum" label="30003" values="Bad|Ugly|Good" default="1" />
 </settings>
