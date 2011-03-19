@@ -3,7 +3,6 @@ import cgi
 import xbmc, xbmcaddon, xbmcgui, xbmcplugin
 import logging
 logging.basicConfig(level=logging.DEBUG)
-logging.info("<------------Module Loaded----------------------->")
 import urllib
 from utils import urldecode
 from channels import *
@@ -13,7 +12,7 @@ __plugin__ = "Canada On Demand"
 __author__ = 'Andre,Renaud  {andrepleblanc,renaudtrudel}@gmail.com'
 __url__ = 'http://github.com/andrepl/plugin.video.canada.on.demand/'
 __date__ = '03-19-2011'
-__version__ = '0.1.11'
+__version__ = '0.2.0'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
 
@@ -36,10 +35,8 @@ class OnDemandPlugin(object):
         
         """
         minimum = int(self.get_setting("worst_channel_support"))
-        print "MINIMUM:",minimum
         for channel_code, channel_class in sorted(ChannelMetaClass.registry.channels.iteritems()):
             info = channel_class.get_channel_entry_info()
-            logging.debug("CHANNEL INFO: %s" %(info,))
 
             # Default to <short_name>.png if no icon is set.
             if info['Thumb'] is None:

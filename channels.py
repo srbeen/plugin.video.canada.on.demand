@@ -357,7 +357,7 @@ class CTVBaseChannel(BaseChannel):
 
             data = {}
             data.update(self.args)
-            logging.debug("link: %s" % (a,))
+            
             data.update({
                 'Title': decode_htmlentities(a['title']),
                 'channel': self.short_name,
@@ -438,7 +438,7 @@ class CanwestBaseChannel(ThePlatformBaseChannel):
         return ThePlatformBaseChannel.get_releases_json(self) + '&query=CategoryIDs|%s'% (self.args['entry_id'],)
 
     def children_with_releases(self, categorylist, cat):
-        logging.debug("Called Children_with_releases")
+        
         children = [c for c in categorylist \
                     if c['depth'] == cat['depth'] + 1 \
                     and c['fullTitle'].startswith(cat['fullTitle'] + "/") \
@@ -455,7 +455,7 @@ class CanwestBaseChannel(ThePlatformBaseChannel):
             logging.debug("ParentID: %s [%s]" % (parent_id, type(parent_id)))
             cat = [c for c in categorylist if c['ID'] == int(parent_id)][0]
         
-        logging.debug("SHOW_EMPTY: %s" % (show_empty,))
+        
         if show_empty:
             categories = [c for c in categorylist if c['depth'] == cat['depth'] + 1 \
                           and c['fullTitle'].startswith(cat['fullTitle'] + "/")]
@@ -515,7 +515,7 @@ class GlobalNews(CanwestBaseChannel):
     
     def action_browse(self):
         self.PlayerTag = dict(self.local_channels)[self.args['local_channel']]
-        logging.debug("ARGS: %s" % (self.args,))
+        
         if self.args['entry_id'] is None:
             return CanwestBaseChannel.action_root(self)
         return CanwestBaseChannel.action_browse(self)
@@ -580,7 +580,7 @@ class CTVLocalNews(CTVBaseChannel):
             
             if txt.startswith("VideoPlaying["):
                 txt = txt.split("{",1)[1].rsplit("}")[0]
-                logging.debug(txt)
+                
                 data = {}
                 data.update(self.args)
                 data.update(parse_javascript_object(txt))
@@ -758,53 +758,7 @@ class CBCChannel(ThePlatformBaseChannel):
         else:
             #do nothing with parent_id in CBC's case
             categories = categorylist
-        """
-        categories = [c for c in categorylist] \
-                      if (
-                          self.plugin.get_setting('show_empty_cat') == True
-                          or (c['hasReleases'] or c['hasChildren'])
-                      )]
-        """
         return categories
-
-    """
-    #is folding-back into ThePlatformBase even possible??
-    def action_browse_episode(self):
-        " ""
-        Handles browsing the clips within an episode.
- 
-        " ""
-        
-        url = 'http://release.theplatform.com/content.select?&pid=%s&format=SMIL&mbr=true' % (self.args['remote_PID'],)
-        soup = get_soup(url)
-        logging.debug("SOUP: %s" % (soup,))
-        base_url = decode_htmlentities(soup.meta['base'])
-        
-        try:
-            base_url, qs = base_url.split("?",1)
-        except ValueError:
-            base_url = base_url
-            qs = None
-            
-        logging.debug({'qs': qs, 'base_url': base_url})
-
-        for i, vidtag in enumerate(soup.findAll('video')):
-            ref = vidtag.ref
-            if ref is None:
-                ref = vidtag
-            clip_url = base_url + ref['src']
-
-            if qs:
-                clip_url += "?" + qs
-
-            data = {}
-            data.update(self.args)
-            data['Title'] = self.args['Title'] + " clip %s" % (i+1,)
-            data['clip_url'] = clip_url
-            data['action'] = 'play'
-            self.plugin.add_list_item(data, is_folder=False)
-        self.plugin.end_list()
-    """
 
     def action_root(self):
         logging.debug('CBCChannel::action_root')
@@ -825,8 +779,6 @@ class CBCChannel(ThePlatformBaseChannel):
         self.in_root = False
         logging.debug('setting categ_json=%s'%self.category_json)
 
-
-"""
 
 class CBCTelevision(CBCBaseChannel):
     short_name = 'cbctv'

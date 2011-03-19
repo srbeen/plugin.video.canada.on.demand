@@ -1,47 +1,55 @@
-0.0.3 - added A bunch of new channels.
-
-0.0.4 - added plugin settings support.
-      - fixed cbc regression
+0.2.0 - this is the first official release.
+      - Cleaned up some code
+      - reversed the order of the changelog :) 
       
-0.0.5 - Fixed a big bad bug in 0.0.4 which broke all canwest channels.
 
-0.0.6 - Improved playback of with CBC and Canwest streams. 
+0.1.11 - Added a setting 'Automatically Play All Clips' which eliminates the 
+         'clip-level' listing for all channels and attempts to play all clips 
+	 as a single playlist. The setting is disabled by default and will only 
+	 work with XBMC svn r32470+.	
+	 
+0.1.10 - Straightenend out the good/ugly/bad situation
+	 
+0.1.9 - Added CTV Local News.
+	
+0.1.8 - Added Global BC which was overlooked in 0.1.7
 
-0.0.7 - added (untested) http proxy support
+0.1.7 - Implemented in new, more flexible URLParser
+      - Defaulted CBC Channels to forced rtmp urls.
+        context menu item now switches it off.
 
-0.0.8 - added port number to http proxy settings 
+0.1.6 - added global news icon
 
-0.1.0 - major: theplatformbase suprclass, CBC fix
-
-0.1.1 - YTV, TreehousTV classes(ThePlatformBase) with improvements to backend:
-	- removed the StoneSoup processing of Canwest XML responses and migrated to common &format=SMIL parsing ;
-	- folded action_browse_episode into base ThePlatform class (easier for maintenance..)
-
-0.1.2 - improved theplatform caching
-      - added force-rtmp option
-      
-0.1.3 - new artwork
+0.1.5 - Added Full Global News Support        
 
 0.1.4 - Canwest channels now properly hide empty categories
       - added context menu entry to queue video clips
       - added plugin setting to hide channels which use
         streams that are poorly supported.
-	
-0.1.5 - Added Full Global News Support
-        
-0.1.6 - added global news icon
 
-0.1.7 - Implemented in new, more flexible URLParser
-      - Defaulted CBC Channels to forced rtmp urls.
-        context menu item now switches it off.
-	
-0.1.8 - Added Global BC which was overlooked in 0.1.7
+0.1.3 - new artwork
 
-0.1.9 - Added CTV Local News.
+0.1.2 - improved theplatform caching
+      - added force-rtmp option
 
-0.1.10 - Straightenend out the good/ugly/bad situation
+0.1.1 - YTV, TreehousTV classes(ThePlatformBase) with improvements to backend:
+	- removed the StoneSoup processing of Canwest XML responses and migrated to common &format=SMIL parsing ;
+	- folded action_browse_episode into base ThePlatform class (easier for maintenance..)
 
-0.1.11 - Added a setting 'Automatically Play All Clips' which eliminates the 
-         'clip-level' listing for all channels and attempts to play all clips 
-	 as a single playlist. The setting is disabled by default and will only 
-	 work with XBMC svn r32470+.
+0.1.0 - major: theplatformbase suprclass, CBC fix
+
+0.0.8 - added port number to http proxy settings 
+
+0.0.7 - added (untested) http proxy support
+
+0.0.6 - Improved playback of with CBC and Canwest streams. 
+      
+0.0.5 - Fixed a big bad bug in 0.0.4 which broke all canwest channels.
+
+0.0.4 - added plugin settings support.
+      - fixed cbc regression
+      
+0.0.3 - added A bunch of new channels.
+
+
+      
