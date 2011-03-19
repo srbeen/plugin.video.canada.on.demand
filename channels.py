@@ -111,6 +111,9 @@ class ThePlatformBaseChannel(BaseChannel):
                 title = '%s (%d kbps)'%(item['title'],int(item['bitrate'])/1024)
             else:
                 title = item['title']
+            action = 'browse_episode'
+            if self.plugin.get_setting('make_playlists') == 'true':
+                action = 'play_episode'
             rels.append({
                 'Thumb': item['thumbnailURL'],
                 'Title': title,
@@ -119,7 +122,7 @@ class ThePlatformBaseChannel(BaseChannel):
                 'remote_url': item['URL'],
                 'remote_PID': item['PID'],
                 'channel': self.args['channel'],
-                'action': 'browse_episode',
+                'action': action
             })
         return rels
 
@@ -154,18 +157,18 @@ class ThePlatformBaseChannel(BaseChannel):
         self.plugin.end_list()
 
 
-    def action_browse_episode(self):
-        url = 'http://release.theplatform.com/content.select?&pid=%s&format=SMIL&mbr=true' % (self.args['remote_PID'],)
+    def get_episode_list_data(self, remote_pid):
+        url = 'http://release.theplatform.com/content.select?&pid=%s&format=SMIL&mbr=true' % (remote_pid,)
         soup = get_soup(url)
         logging.debug("SOUP: %s" % (soup,))
-        
+        results = []
 
         for i, ref in enumerate(soup.findAll('ref')):
             base_url = ''
             playpath = None
 
             if ref['src'].startswith('rtmp://'): #all other channels type of SMIL
-            #the meta base="http:// is actually the frefix to an adserver
+            #the meta base="http:// is actually the prefix to an adserver
                 try:
                     base_url, playpath = decode_htmlentities(ref['src']).split('<break>', 1) #<break>
                 except ValueError:
@@ -185,7 +188,6 @@ class ThePlatformBaseChannel(BaseChannel):
                 base_url, qs = base_url.split("?",1)
             except ValueError:
                 base_url = base_url
-                qs = None
 
             logging.debug({'base_url': base_url, 'playpath': playpath, 'qs': qs, })
 
@@ -200,7 +202,24 @@ class ThePlatformBaseChannel(BaseChannel):
             data['Title'] = self.args['Title']# + " clip %s" % (i+1,)
             data['clip_url'] = clip_url
             data['action'] = 'play'
-            self.plugin.add_list_item(data, is_folder=False)
+            results.append(data)
+        return results
+    
+    def action_play_episode(self):
+        import xbmc
+        playlist = xbmc.PlayList(1)
+        playlist.clear() 
+        for data in self.get_episode_list_data(self.args['remote_PID']):
+            url = self.plugin.get_url(data)
+            item = self.plugin.add_list_item(data, is_folder=False, return_only=True)
+            playlist.add(url, item)
+        xbmc.Player().play(playlist)
+        xbmc.executebuiltin('XBMC.ActivateWindow(fullscreenvideo)')
+
+        
+    def action_browse_episode(self):
+        for item in self.get_episode_list_data(self.args['remote_PID']):
+            self.plugin.add_list_item(item, is_folder=False)
         self.plugin.end_list()
 
 
@@ -242,6 +261,31 @@ class CTVBaseChannel(BaseChannel):
         self.plugin.set_stream_url(url)
 
 
+
+    def action_play_episode(self):
+        import xbmc
+        rurl = self.get_url(self.args['remote_url'])
+        div = get_soup(rurl).find('div', {'id': re.compile('^Level\d$')})
+        levelclass = [c for c in re.split(r"\s+", div['class']) if c.startswith("Level")][0]
+        levelclass = levelclass[5:]
+        if levelclass != '4': # Browsing at the clip level
+            raise ChannelException("An error occured trying to play a full episode,try turning off the 'Automatically Play All Clips' setting")
+        
+        parser = getattr(self, 'parse_level_%s' % (levelclass,))
+        playlist = xbmc.PlayList(1)
+        playlist.clear()
+        
+        for item in parser(div):
+            if item.get('playable', False):
+                if self.args.get('use_rtmp'):
+                    logging.debug("Adding Forced RTMP Item")
+                else:
+                    logging.debug("Adding Playable Item: title=%s"%item['Title'])
+                url = self.plugin.get_url(item)
+                li = self.plugin.add_list_item(item, is_folder=False, return_only=True)
+                playlist.add(url, li)
+        xbmc.Player().play(playlist)
+        xbmc.executebuiltin('XBMC.ActivateWindow(fullscreenvideo)')
 
     def action_browse(self):
         rurl = self.get_url(self.args['remote_url'])
@@ -303,6 +347,10 @@ class CTVBaseChannel(BaseChannel):
 
 
     def parse_level_3(self, soup):
+        episode_action = 'browse'
+        if self.plugin.get_setting('make_playlists') == 'true':
+            episode_action = 'play_episode'
+            
         for li in soup.findAll('li'):
             a = li.find('a', {'id': re.compile(r'^Episode_\d+')})
             dl = li.find('dl')
@@ -340,7 +388,7 @@ class CTVBaseChannel(BaseChannel):
 
             elif "GetChildPanel('Episode'" in a['onclick']:
                 showid = self.args['ShowID']
-                data['action'] = 'browse'
+                data['action'] = episode_action 
                 data['remote_url'] = 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=3&ForceParentShowID=%s&EpisodeID=%s' % (showid, a['id'][8:])
                 data['ShowID'] = showid
 
