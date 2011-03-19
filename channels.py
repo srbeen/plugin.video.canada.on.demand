@@ -869,6 +869,7 @@ class Discovery(CTVBaseChannel):
 
 
 class ComedyNetwork(CTVBaseChannel):
+    status = STATUS_UGLY
     short_name = 'comedynetwork'
     base_url = 'http://watch.thecomedynetwork.ca/AJAX/'
     long_name = 'The Comedy Network'
@@ -881,7 +882,7 @@ class Space(CTVBaseChannel):
     swf_url = "http://watch.spacecast.com/Flash/player.swf?themeURL=http://watch.spacecast.com/themes/Space/player/theme.aspx"
 
 class MuchMusic(CTVBaseChannel):
-    status = STATUS_UGLY
+    status = STATUS_BAD
     short_name = 'muchmusic'
     long_name = 'Much Music'
     base_url = 'http://watch.muchmusic.com/AJAX/'
