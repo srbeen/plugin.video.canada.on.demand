@@ -230,7 +230,7 @@ class ThePlatformBaseChannel(BaseChannel):
 
 
 class CTVBaseChannel(BaseChannel):
-    status = STATUS_BAD
+    status = STATUS_GOOD
     is_abstract = True
     root_url = 'VideoLibraryWithFrame.aspx'
     
