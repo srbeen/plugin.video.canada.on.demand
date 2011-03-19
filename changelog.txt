@@ -40,3 +40,8 @@
 0.1.9 - Added CTV Local News.
 
 0.1.10 - Straightenend out the good/ugly/bad situation
+
+0.1.11 - Added a setting 'Automatically Play All Clips' which eliminates the 
+         'clip-level' listing for all channels and attempts to play all clips 
+	 as a single playlist. The setting is disabled by default and will only 
+	 work with XBMC svn r32470+.
