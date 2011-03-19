@@ -3,7 +3,7 @@ Meta and Base Classes for basic Channel Support
 
 """
 
-STATUS_UGLY, STATUS_BAD, STATUS_GOOD = 0, 1, 2
+STATUS_BAD, STATUS_UGLY, STATUS_GOOD = 0, 1, 2
 
 class ChannelRegistry(object):
     
