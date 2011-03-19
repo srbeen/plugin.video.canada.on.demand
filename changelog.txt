@@ -1,3 +1,5 @@
+0.2.1 - 0.2.0 was completely broken. sorry :)
+
 0.2.0 - this is the first official release.
       - Cleaned up some code
       - reversed the order of the changelog :) 

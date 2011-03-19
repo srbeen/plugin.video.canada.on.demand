@@ -780,66 +780,6 @@ class CBCChannel(ThePlatformBaseChannel):
         logging.debug('setting categ_json=%s'%self.category_json)
 
 
-class CBCTelevision(CBCBaseChannel):
-    short_name = 'cbctv'
-    long_name = 'CBC Television'
-    #cbcsection = '1221254309'
-    cbcsection = 'Shows'
-    
-    def get_categories_json(self):
-        url = '%sShows' % CBCBaseChannel.get_categories_json(self)
-        logging.debug('get_categories_json: %s'%url)
-        return url
-
-class CBCNews(CBCBaseChannel):
-    short_name = 'cbcnews'
-    long_name = 'CBC News'
-    cbcsection = 'News'    
-
-    def get_categories_json(self):
-        url = '%sNews' % CBCBaseChannel.get_categories_json(self)
-        logging.debug('get_categories_json: %s'%url)
-        return url
-
-
-class CBCSports(CBCBaseChannel):
-    short_name = 'cbcsports'
-    long_name = 'CBC Sports'
-    cbcsection = 'Sports'    
-
-    def get_categories_json(self):
-        url = '%sSports' % CBCBaseChannel.get_categories_json(self)
-        logging.debug('get_categories_json: %s'%url)
-        return url
-
-
-
-class CBCKids(CBCBaseChannel):
-    short_name = 'cbckids'
-    long_name = 'CBC Kids'
-    cbcsection = 'Kids'    
-
-    def get_categories_json(self):
-        url = '%sKids' % CBCBaseChannel.get_categories_json(self)
-        logging.debug('get_categories_json: %s'%url)
-        return url
-
-
-class CBCRadio(CBCBaseChannel):
-    short_name = 'cbcradio'
-    long_name = 'CBC Radio'
-    cbcsection = 'Radio'    
-
-    def get_categories_json(self):
-        url = '%sRadio' % CBCBaseChannel.get_categories_json(self)
-        logging.debug('get_categories_json: %s'%url)
-        return url
-"""
-
-
-
-
-
 class CTV(CTVBaseChannel):
     short_name = 'ctv'
     long_name = 'CTV'
