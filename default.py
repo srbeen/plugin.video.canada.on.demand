@@ -12,7 +12,7 @@ __plugin__ = "Canada On Demand"
 __author__ = 'Andre,Renaud  {andrepleblanc,renaudtrudel}@gmail.com'
 __url__ = 'http://github.com/andrepl/plugin.video.canada.on.demand/'
 __date__ = '03-19-2011'
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
 
@@ -63,8 +63,9 @@ class OnDemandPlugin(object):
         xbmcplugin.setResolvedUrl(self.handle, True, listitem)
         
         
+    
     def end_list(self):
-        
+        xbmcplugin.addSortMethod(self.handle, xbmcplugin.SORT_METHOD_NONE)
         xbmcplugin.endOfDirectory(self.handle, succeeded=True)
 
         

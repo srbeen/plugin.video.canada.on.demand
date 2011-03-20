@@ -84,11 +84,10 @@ class ThePlatformBaseChannel(BaseChannel):
             if 'customData' in c:
                 for dict in c['customData']:
                     if dict['value']:
-                        if dict['value'] == '(not specified)':
-                            dict['value'] = '\'\''
-                        if dict['value'] != '':
-                            data.update({dict['title']: dict['value']},) #urlquoteval(dict['value'])
-            logging.debug(data)
+                        #if dict['value'] == '(not specified)':
+                            #dict['value'] = "''"
+                        #if dict['value'] != '':
+                        data.update({dict['title']: dict['value']},) #urlquoteval(dict['value'])
                 
             cats.append(data)
             
@@ -106,7 +105,7 @@ class ThePlatformBaseChannel(BaseChannel):
         
         rels = []
         for item in data['items']:
-            logging.debug(item)
+#            logging.debug(item)
             if item['bitrate'] != '':
                 title = '%s (%d kbps)'%(item['title'],int(item['bitrate'])/1024)
             else:
@@ -439,9 +438,14 @@ class CanwestBaseChannel(ThePlatformBaseChannel):
 
     def children_with_releases(self, categorylist, cat):
         
+        if cat['fullTitle'] == '':
+            prefix = ''
+        else:
+            prefix = cat['fullTitle'] + "/"
+        
         children = [c for c in categorylist \
                     if c['depth'] == cat['depth'] + 1 \
-                    and c['fullTitle'].startswith(cat['fullTitle'] + "/") \
+                    and c['fullTitle'].startswith(prefix) \
                     and (c['hasReleases'] or self.children_with_releases(categorylist, c))]
         return children
             
@@ -450,15 +454,22 @@ class CanwestBaseChannel(ThePlatformBaseChannel):
         
         show_empty = self.plugin.get_setting('show_empty_cat') == 'true'
         if parent_id is None:
-            cat = [c for c in categorylist if c['depth'] == self.root_depth - 1][0]
+            if self.root_depth > 0:
+                cat = [c for c in categorylist if c['depth'] == self.root_depth - 1][0]
+            else:
+                cat = {'depth': -1, 'fullTitle': ''}
         else:
             logging.debug("ParentID: %s [%s]" % (parent_id, type(parent_id)))
             cat = [c for c in categorylist if c['ID'] == int(parent_id)][0]
         
+        if cat['fullTitle'] == '':
+            prefix = ''
+        else:
+            prefix = cat['fullTitle'] + "/"
         
         if show_empty:
             categories = [c for c in categorylist if c['depth'] == cat['depth'] + 1 \
-                          and c['fullTitle'].startswith(cat['fullTitle'] + "/")]
+                          and c['fullTitle'].startswith(prefix)]
             
         else:
             categories = self.children_with_releases(categorylist, cat)
@@ -686,6 +697,11 @@ class YTV(CanwestBaseChannel):
     swf_url = 'http://www.ytv.com/PDK/swf/flvPlayer.swf'
     root_depth = 0
     
+    def get_categories_json(self,arg):
+        url = CanwestBaseChannel.get_categories_json(self,arg) + '&field=parentID&query=IncludeParents' #urlencode
+        logging.debug('get_categories_json: %s'%url)
+        return url
+
 
 class TreehouseTV(CanwestBaseChannel):
     short_name = 'treehouse'
@@ -694,18 +710,13 @@ class TreehouseTV(CanwestBaseChannel):
     swf_url = 'http://mediaparent.treehousetv.com/swf/flvPlayer.swf'
     root_depth = 0
 
-    #not required, splitting the url into a playpath= argumentwith transform_url  still works!
-    #def action_play(self):
-    #    self.plugin.set_stream_url( self.args['clip_url'] + ' swfurl=%s swfvfy=true'%self.swf_url)
-
-
 
 
 class CBCChannel(ThePlatformBaseChannel):
     #is_abstract = True
     PID = "_DyE_l_gC9yXF9BvDQ4XNfcCVLS4PQij"
     base_url = 'http://cbc.feeds.theplatform.com/ps/JSON/PortalService/2.2/'
-    
+    status = STATUS_UGLY
     short_name = 'cbc'
     long_name = 'CBC'
     category_cache_timeout = 0 # can't cache for CBC, need to drill-down each time
@@ -728,18 +739,19 @@ class CBCChannel(ThePlatformBaseChannel):
     #arg is CBC's customfield array from getReleases query
     def get_releases_json(self,arg):
         url = ThePlatformBaseChannel.get_releases_json(self)
+        logging.warn("RELURL: %s" % (url,))
         if 'Account' in arg:
-            url += '&query=ContentCustomText|Account|%s'%urlquoteval(arg['Account'])
+            url += '&query=ContentCustomText|Account|%s' % urlquoteval(arg['Account'])
         if 'Show' in arg:
-            url += '&query=ContentCustomText|Show|%s'%urlquoteval(arg['Show'])
+            url += '&query=ContentCustomText|Show|%s' % urlquoteval(arg['Show'])
         if 'SeasonNumber' in arg:
-            url += '&query=ContentCustomText|SeasonNumber|%s'%urlquoteval(arg['SeasonNumber'])
+            url += '&query=ContentCustomText|SeasonNumber|%s' % urlquoteval(arg['SeasonNumber'])
         if 'AudioVideo' in arg:
-            url += '&query=ContentCustomText|AudioVideo|%s'%urlquoteval(arg['AudioVideo'])
+            url += '&query=ContentCustomText|AudioVideo|%s' % urlquoteval(arg['AudioVideo'])
         if 'ClipType' in arg:
-            url += '&query=ContentCustomText|ClipType|%s'%urlquoteval(arg['ClipType'])
+            url += '&query=ContentCustomText|ClipType|%s' % urlquoteval(arg['ClipType'])
         if 'LiveOnDemand' in arg:
-            url += '&query=ContentCustomText|LiveOnDemand|%s'%urlquoteval(arg['LiveOnDemand'])
+            url += '&query=ContentCustomText|LiveOnDemand|%s' % urlquoteval(arg['LiveOnDemand'])
 
 
         #url += '&query=CategoryIDs|%s'%arg['entry_id']

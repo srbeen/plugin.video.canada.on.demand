@@ -1,3 +1,7 @@
+0.2.2 - Fixed YTV And Treehouse Support
+      - Improved(?) CBC Support, but marked as Ugly, 
+      - category/release listings aren't quite right.
+      
 0.2.1 - 0.2.0 was completely broken. sorry :)
 
 0.2.0 - this is the first official release.
