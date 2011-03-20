@@ -16,7 +16,7 @@ __plugin__ = "Canada On Demand"
 __author__ = 'Andre,Renaud  {andrepleblanc,renaudtrudel}@gmail.com'
 __url__ = 'http://github.com/andrepl/plugin.video.canada.on.demand/'
 __date__ = '03-20-2011'
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
 
@@ -359,6 +359,7 @@ class OnDemandPlugin(object):
         self.add_list_item({
             'Title': 'All Channels',
             'action': 'channel_list',
+            'Thumb': os.path.join(__settings__.getAddonInfo('path'), 'icon.png')
         })
         self.end_list()
         

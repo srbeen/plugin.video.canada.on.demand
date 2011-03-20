@@ -1,3 +1,5 @@
+0.3.1 - set an icon for 'all channels'
+
 0.3.0 - Added a new 'Bookmarks' Feature.  Any folder in any channel can be "Bookmarked" 
         and easily accessed from the top level of the plugin.
 
