@@ -1,3 +1,5 @@
+0.2.3 - Added Support for Tou.TV [Still has some unicode issues]
+
 0.2.2 - Fixed YTV And Treehouse Support
       - Improved(?) CBC Support, but marked as Ugly, 
       - category/release listings aren't quite right.

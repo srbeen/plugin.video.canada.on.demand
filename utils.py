@@ -20,7 +20,7 @@ class URLParser(object):
     Unused, incomplete replacement for transform_stream_url
     """
     
-    url_re = re.compile(r"(?P<scheme>\w+)://(?P<netloc>[\w\d\.]+)/(?P<app>\w+)/(?P<playpath>[^\?]+)(?:\?(?P<querystring>.*))?")
+    url_re = re.compile(r"(?P<scheme>\w+)://(?P<netloc>[\w\d\-\.]+)/(?P<app>\w+)/(?P<playpath>[^\?]+)(?:\?(?P<querystring>.*))?")
     
     def __init__(self, swf_url=None, swf_verify=False, \
                  force_rtmp=False, playpath_qs=True, 
@@ -42,7 +42,7 @@ class URLParser(object):
     def parse(self):
         match = self.url_re.match(self.input_url)
         if not match:
-            raise ParseException("Couldn't parse input url: %s" % (url, ))        
+            raise ParseException("Couldn't parse input url: %s" % (self.input_url, ))        
         self.data = match.groupdict()    
         
     def clean_scheme(self, scheme):
@@ -57,10 +57,14 @@ class URLParser(object):
     
     def clean_playpath(self, playpath):
         basename, extension = os.path.splitext(playpath)
+        
         if extension.lower() in ('.flv',''):
             playpath = basename
         else:
-            playpath = "%s:%s%s" % (extension[1:], basename, extension)
+            if ':' in basename:
+                playpath = "%s%s" % (basename, extension)
+            else:
+                playpath = "%s:%s%s" % (extension[1:], basename, extension)
             
         if self.playpath_qs and self.data['querystring']:
             playpath += "?%(querystring)s" % self.data
