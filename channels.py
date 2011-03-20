@@ -430,7 +430,7 @@ class CanwestBaseChannel(ThePlatformBaseChannel):
     PID = None
     root_depth = 1
 
-    def get_categories_json(self,arg):
+    def get_categories_json(self,arg=None):
         return ThePlatformBaseChannel.get_categories_json(self) # + '&query=ParentIDs|%s'%arg
 
     def get_releases_json(self,arg='0'):
@@ -492,7 +492,7 @@ class GlobalTV(CanwestBaseChannel):
     #swf_url = 'http://www.globaltv.com/video/swf/flvPlayer.swf'
 
     
-    def get_categories_json(self,arg):
+    def get_categories_json(self,arg=None):
         url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/Global%20Video%20Centre' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
@@ -644,7 +644,7 @@ class Showcase(CanwestBaseChannel):
     long_name = 'Showcase'
     PID = 'sx9rVurvXUY4nOXBoB2_AdD1BionOoPy'
     #swf_url = 'http://www.showcase.ca/video/swf/flvPlayer.swf'
-
+    root_depth = 2
     def get_categories_json(self,arg):
         url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/Showcase%20Video%20Centre' #urlencode
         logging.debug('get_categories_json: %s'%url)
@@ -671,8 +671,8 @@ class TVTropolis(CanwestBaseChannel):
     PID = '3i9zvO0c6HSlP7Fz848a0DvzBM0jUWcC'
     #swf_url = 'http://www.tvtropolis.com/swf/cwp/flvPlayer.swf'
 
-    def get_categories_json(self):
-        url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/TVTropolis%20Player%20-%20Video%20Center' #urlencode
+    def get_categories_json(self, arg=None):
+        url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/TVTropolis%20Player%20-%20Video%20Center' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
 
