@@ -957,7 +957,8 @@ class TouTV(ThePlatformBaseChannel):
         logging.debug("CAT: %s" % (cat,))
         url = self.base_url + self.args['category'] + "/"
         soup = get_soup(url)
-        for a in soup.findAll('a', {'class': 'bloc_contenu impair'}):
+        logging.debug(url)
+        for a in soup.findAll('a', {'class': re.compile(r'bloc_contenu.*')}):
             data = {}
             data.update(self.args)
             data.update({
@@ -965,6 +966,7 @@ class TouTV(ThePlatformBaseChannel):
                 'remote_url': 'http://tou.tv' + a['href'],
                 'Title': a.find('h1').contents[0],
             })
+            
             self.plugin.add_list_item(data)
         self.plugin.end_list()
         
@@ -983,3 +985,6 @@ class TouTV(ThePlatformBaseChannel):
             self.plugin.add_list_item(data)
         self.plugin.end_list()
         
+        
+class CityTV(BaseChannel):
+    pass
