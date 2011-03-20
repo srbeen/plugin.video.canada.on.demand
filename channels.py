@@ -876,6 +876,7 @@ class TouTV(ThePlatformBaseChannel):
     base_url = 'http://www.tou.tv/repertoire/'
     swf_url = 'http://static.tou.tv/lib/ThePlatform/4.2.9c/swf/flvPlayer.swf'
     default_action = 'root'
+    
     categories = [
             ("animation","Animation"),
             ("entrevues-varietes", "Entrevues et varietes"),
@@ -986,5 +987,3 @@ class TouTV(ThePlatformBaseChannel):
         self.plugin.end_list()
         
         
-class CityTV(BaseChannel):
-    pass
