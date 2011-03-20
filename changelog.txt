@@ -1,3 +1,6 @@
+0.3.0 - Added a new 'Bookmarks' Feature.  Any folder in any channel can be "Bookmarked" 
+        and easily accessed from the top level of the plugin.
+
 0.2.4 - Fixed TVTropolis & Showcase
 
 0.2.3 - Added Support for Tou.TV [Still has some unicode issues]
