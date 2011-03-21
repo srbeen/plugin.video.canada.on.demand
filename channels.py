@@ -102,27 +102,50 @@ class ThePlatformBaseChannel(BaseChannel):
         logging.debug('get_releases url=%s'%url)
         
         data = self.parse_callback(get_page(url).read())
+        make_playlists = self.plugin.get_setting('make_playlists') == 'true'
+        max_bitrate = int(self.plugin.get_setting('max_bitrate'))
         
         rels = []
         for item in data['items']:
-#            logging.debug(item)
-            if item['bitrate'] != '':
-                title = '%s (%d kbps)'%(item['title'],int(item['bitrate'])/1024)
+            item['bitrate'] = int(item['bitrate'])/1024
+            if (not rels) or (rels[-1]['Title'] != item['title']):
+                
+                action = 'browse_episode'
+                if make_playlists:
+                    action = 'play_episode'
+                
+                rels.append({
+                    'Thumb': item['thumbnailURL'],
+                    'Title': item['title'],
+                    'Plot': item['description'],
+                    'entry_id': item['ID'],
+                    'remote_url': item['URL'],
+                    'remote_PID': item['PID'],
+                    'channel': self.args['channel'],
+                    'action': action,
+                    'bitrate': item['bitrate'],
+                })
+
             else:
-                title = item['title']
-            action = 'browse_episode'
-            if self.plugin.get_setting('make_playlists') == 'true':
-                action = 'play_episode'
-            rels.append({
-                'Thumb': item['thumbnailURL'],
-                'Title': title,
-                'Plot': item['description'],
-                'entry_id': item['ID'],
-                'remote_url': item['URL'],
-                'remote_PID': item['PID'],
-                'channel': self.args['channel'],
-                'action': action
-            })
+                if item['bitrate'] <= max_bitrate and item['bitrate'] > rels[-1]['bitrate']:
+                    rels.pop()
+                    action = 'browse_episode'
+                    if make_playlists:
+                        action = 'play_episode'
+                    
+                    rels.append({
+                        'Thumb': item['thumbnailURL'],
+                        'Title': item['title'],
+                        'Plot': item['description'],
+                        'entry_id': item['ID'],
+                        'remote_url': item['URL'],
+                        'remote_PID': item['PID'],
+                        'channel': self.args['channel'],
+                        'action': action,
+                        'bitrate': item['bitrate'],
+                    })
+                    
+                
         return rels
 
 
