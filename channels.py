@@ -599,7 +599,8 @@ class CTVLocalNews(CTVBaseChannel):
                 'entry_id': None,
                 'local_channel': channel,
                 'remote_url': domain,
-                'use_rtmp': 1
+                'use_rtmp': 1,
+                'Thumb': self.args['Thumb'],
             })
         self.plugin.end_list()
 
@@ -1093,4 +1094,56 @@ class CPAC(BaseChannel):
             'Title': 'All Shows',
             'channel': 'cpac',
         })
+        self.plugin.end_list()
+        
+class Family(BaseChannel):
+    status = STATUS_BAD
+    short_name = 'family'
+    long_name = 'Family.ca'
+    base_url = 'http://www.family.ca'
+    default_action = 'root'
+    
+    def action_play_video(self):
+        qs = urldecode(get_page(self.base_url + "/video/scripts/loadToken.php").read().strip()[1:])['uri']
+        filename = self.args['filename']
+        url = "rtmpe://cp107996.edgefcs.net/ondemand/videos/family/%s?%s" % (filename, qs)
+        parser = URLParser(swf_url="http://www.family.ca/video/player.swf", playpath_qs=False, force_rtmp=True)
+        url = parser(url)
+        self.plugin.set_stream_url(url)
+        
+    def action_browse_category(self):
+        results = simplejson.load(get_page(self.base_url + "/video/scripts/loadGroupVideos.php?groupID=%s" % (self.args['id'],)))
+        for vid in results['videosbygroup']:
+            data = {}
+            data.update(self.args)
+
+            if vid['thumb']:
+                thumb = self.base_url + "/video/images/thumbnails/%s" % (vid['thumb'],)
+            else:
+                thumb = ''
+            data['Title'] = vid['title']
+            data['Plot'] = vid['description']
+            data['Thumb'] = thumb
+            data['filename'] = vid['filename']
+            data['action'] = 'play_video'
+            self.plugin.add_list_item(data, is_folder=False)
+        self.plugin.end_list()
+        
+    def action_root(self):
+        soup = get_soup(self.base_url + "/video/")
+        logging.debug(soup)
+        div = soup.find('div', {'id': 'categoryList'})
+        data = {}
+        data.update(self.args)
+        data['action'] = 'browse_featured'
+        data['Title'] = 'Featured Videos'
+        self.plugin.add_list_item(data)
+        
+        for a in div.findAll('a')[3:]:
+            data = {}
+            data.update(self.args)
+            data['Title'] = decode_htmlentities(a.contents[0].strip())
+            data['action'] = 'browse_category'
+            data['id'] = a['href'].split("(",1)[1].split(",")[0]
+            self.plugin.add_list_item(data)
         self.plugin.end_list()

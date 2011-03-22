@@ -15,8 +15,8 @@ except:
 __plugin__ = "Canada On Demand"
 __author__ = 'Andre,Renaud  {andrepleblanc,renaudtrudel}@gmail.com'
 __url__ = 'http://github.com/andrepl/plugin.video.canada.on.demand/'
-__date__ = '03-20-2011'
-__version__ = '0.3.5'
+__date__ = '03-21-2011'
+__version__ = '0.3.6'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
 
@@ -305,6 +305,7 @@ class OnDemandPlugin(object):
         else:
             for bm in bookmarks:
                 data = urldecode(bm[2].split("?", 1)[1])
+                data['Title'] = bm[1]
                 self.add_list_item(data, is_folder=True, bookmark_parent=bm[3], bookmark_id=bm[0])
             
         self.end_list()
