@@ -888,7 +888,6 @@ class Fashion(CTVBaseChannel):
 
 
 class BravoFact(CTVBaseChannel):
-    icon_path = 'bravofact.jpg'
     long_name = 'Bravo Fact'
     short_name = 'bravofact'
     base_url = 'http://watch.bravofact.com/AJAX/'
@@ -1103,11 +1102,23 @@ class Family(BaseChannel):
     base_url = 'http://www.family.ca'
     default_action = 'root'
     
+    class FamilyURLParser(URLParser):
+        def get_base_url(self):
+            print self.data
+            url = "%(scheme)s://%(netloc)s/%(app)s" % self.data
+            if self.data['querystring']:
+                url += "?%(querystring)s" % self.data
+            return url
+        
+        def get_url_params(self):
+            params = super(Family.FamilyURLParser, self).get_url_params()
+            params.append(('pageUrl', 'http://www.family.ca/video/#video=%s' % (726,)))
+            return params
     def action_play_video(self):
         qs = urldecode(get_page(self.base_url + "/video/scripts/loadToken.php").read().strip()[1:])['uri']
         filename = self.args['filename']
         url = "rtmpe://cp107996.edgefcs.net/ondemand/videos/family/%s?%s" % (filename, qs)
-        parser = URLParser(swf_url="http://www.family.ca/video/player.swf", playpath_qs=False, force_rtmp=True)
+        parser = Family.FamilyURLParser(swf_url="http://www.family.ca/video/player.swf", playpath_qs=False)
         url = parser(url)
         self.plugin.set_stream_url(url)
         

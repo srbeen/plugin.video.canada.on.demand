@@ -1,3 +1,5 @@
+0.3.7 - Improved sorting
+
 0.3.6 - added Family.ca [BAD] all streams appear to require type 9 handshake
       - Fixed bookmark display name bug.
 

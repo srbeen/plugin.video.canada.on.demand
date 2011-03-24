@@ -15,8 +15,8 @@ except:
 __plugin__ = "Canada On Demand"
 __author__ = 'Andre,Renaud  {andrepleblanc,renaudtrudel}@gmail.com'
 __url__ = 'http://github.com/andrepl/plugin.video.canada.on.demand/'
-__date__ = '03-21-2011'
-__version__ = '0.3.6'
+__date__ = '03-24-2011'
+__version__ = '0.3.7'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
 
@@ -73,7 +73,7 @@ class OnDemandPlugin(object):
                 info['Thumb'] = info['channel'] + ".png"
 
             try:
-                info['Thumb'] = self.get_resource_path('images', info['Thumb'])
+                info['Thumb'] = self.get_resource_path('images','channels', info['Thumb'])
             except ChannelException:
                 logging.warn("Couldn't Find Channel Icon for %s" % (channel_code,))
             
@@ -97,8 +97,10 @@ class OnDemandPlugin(object):
         
         
     
-    def end_list(self):
-        xbmcplugin.addSortMethod(self.handle, xbmcplugin.SORT_METHOD_NONE)
+    def end_list(self): 
+        xbmcplugin.setContent(self.handle, 'movies')
+        xbmcplugin.addSortMethod(self.handle, xbmcplugin.SORT_METHOD_LABEL)
+        xbmcplugin.addSortMethod(self.handle, xbmcplugin.SORT_METHOD_DATE)
         xbmcplugin.endOfDirectory(self.handle, succeeded=True)
 
 
