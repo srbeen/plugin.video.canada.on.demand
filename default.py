@@ -15,8 +15,8 @@ except:
 __plugin__ = "Canada On Demand"
 __author__ = 'Andre,Renaud  {andrepleblanc,renaudtrudel}@gmail.com'
 __url__ = 'http://github.com/andrepl/plugin.video.canada.on.demand/'
-__date__ = '03-24-2011'
-__version__ = '0.3.7'
+__date__ = '03-25-2011'
+__version__ = '0.3.8'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
 
@@ -77,8 +77,15 @@ class OnDemandPlugin(object):
             except ChannelException:
                 logging.warn("Couldn't Find Channel Icon for %s" % (channel_code,))
             
-            if channel_class.status >= minimum:
+            if self.get_setting('awesome_librtmp') == "true":
                 self.add_list_item(info)
+            else:
+                if channel_class.status >= minimum:
+                    if channel_class.status == STATUS_BAD:                        
+                        info['Title'] = info['Title'] + " [BAD]"
+                    elif channel_class.status == STATUS_UGLY:
+                        info['Title'] = info['Title'] + " [UGLY]"
+                    self.add_list_item(info)
         self.end_list()
         
     def get_dialog(self):
@@ -97,10 +104,13 @@ class OnDemandPlugin(object):
         
         
     
-    def end_list(self): 
-        xbmcplugin.setContent(self.handle, 'movies')
-        xbmcplugin.addSortMethod(self.handle, xbmcplugin.SORT_METHOD_LABEL)
-        xbmcplugin.addSortMethod(self.handle, xbmcplugin.SORT_METHOD_DATE)
+    def end_list(self, content='movies', sort_methods=None): 
+        xbmcplugin.setContent(self.handle, content)
+        if sort_methods is None:
+            sort_methods = (xbmcplugin.SORT_METHOD_NONE,)
+        
+        for sm in sort_methods:
+            xbmcplugin.addSortMethod(self.handle, *sort_methods)        
         xbmcplugin.endOfDirectory(self.handle, succeeded=True)
 
 
@@ -310,7 +320,7 @@ class OnDemandPlugin(object):
                 data['Title'] = bm[1]
                 self.add_list_item(data, is_folder=True, bookmark_parent=bm[3], bookmark_id=bm[0])
             
-        self.end_list()
+        self.end_list(sort_methods=(xbmcplugin.SORT_METHOD_LABEL,))
         
     def action_remove_from_bookmarks(self):
         logging.debug("REMOVE BOOKMARK: %s" % (self.args['url'],))
@@ -396,6 +406,7 @@ class OnDemandPlugin(object):
     
         
     def __init__(self, script_url, handle, querystring):
+        logging.debug("XBMC VERSION: %s" % (xbmc.getInfoLabel( "System.BuildVersion" ),))
         proxy = self.get_setting("http_proxy")
         port = self.get_setting("http_proxy_port")
         if proxy and port:

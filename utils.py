@@ -100,6 +100,9 @@ class URLParser(object):
     
     def generate_url(self):
         base_url = self.get_base_url()
+        if not self.data['scheme'].startswith("rtmp"):
+            self.output_url = self.input_url
+            return
         
         params = self.get_url_params()
         if params:

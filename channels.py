@@ -265,7 +265,6 @@ class ThePlatformBaseChannel(BaseChannel):
             'entry_id': None,
             'channel': self.short_name,
             'force_cache_update': True,
-            'use_rtmp': 0,
         }
 
 
@@ -277,7 +276,8 @@ class CTVBaseChannel(BaseChannel):
     
     def action_play_clip(self):
         rurl = "http://esi.ctv.ca/datafeed/urlgenjs.aspx?vid=%s" % (self.args['ClipId'],)
-        parse = URLParser(swf_url=self.swf_url, force_rtmp=self.args.get('use_rtmp', ''))
+        parse = URLParser(swf_url=self.swf_url, force_rtmp=not self.plugin.get_setting("awesome_librtmp") == "true")
+        
         url = parse(get_page(rurl).read().strip()[17:].split("'",1)[0])
         logging.debug("Playing Stream: %s" % (url,))
         self.plugin.set_stream_url(url)
@@ -299,10 +299,6 @@ class CTVBaseChannel(BaseChannel):
         
         for item in parser(div):
             if item.get('playable', False):
-                if self.args.get('use_rtmp'):
-                    logging.debug("Adding Forced RTMP Item")
-                else:
-                    logging.debug("Adding Playable Item: title=%s"%item['Title'])
                 url = self.plugin.get_url(item)
                 li = self.plugin.add_list_item(item, is_folder=False, return_only=True)
                 playlist.add(url, li)
@@ -314,33 +310,12 @@ class CTVBaseChannel(BaseChannel):
         div = get_soup(rurl).find('div', {'id': re.compile('^Level\d$')})
         levelclass = [c for c in re.split(r"\s+", div['class']) if c.startswith("Level")][0]
         levelclass = levelclass[5:]
-        if levelclass == '4': # Browsing at the clip level
-                              # We want to build a context menu
-                              # Item to allow 're-browsing' this directory
-                              # with forced rtmp urls.
-            menu_args = {}
-            menu_args.update(self.args)
-
-            if self.args.get('use_rtmp'):
-                menu_args['use_rtmp'] = ''
-                menuitem = ('Use Given Urls', 'Container.Update(%s)' % (self.plugin.get_url(menu_args)))
-            else:
-                menu_args['use_rtmp'] = 1
-                menuitem = ('Force RTMP Urls', 'Container.Update(%s)' % (self.plugin.get_url(menu_args)))
-            
-            context_menu_items = [menuitem]
-        else:
-            context_menu_items = None
         
         parser = getattr(self, 'parse_level_%s' % (levelclass,))
-
+        logging.debug("Parse Level %s" % (levelclass,))
         for item in parser(div):
             if item.get('playable', False):
-                if self.args.get('use_rtmp'):
-                    logging.debug("Adding Forced RTMP Item")
-                else:
-                    logging.debug("Adding Playable Item: title=%s"%item['Title'])
-                self.plugin.add_list_item(item, is_folder=False, context_menu_items=context_menu_items)
+                self.plugin.add_list_item(item, is_folder=False)
             else:
                 self.plugin.add_list_item(item)
         self.plugin.end_list()
@@ -348,7 +323,6 @@ class CTVBaseChannel(BaseChannel):
 
     def parse_level_4(self, soup):
         for li in soup.findAll('li'):
-            logging.debug(li)
             a = li.find('dl', {"class": "Item"}).dt.a
             data = {}
             data.update(self.args)
@@ -599,7 +573,7 @@ class CTVLocalNews(CTVBaseChannel):
                 'entry_id': None,
                 'local_channel': channel,
                 'remote_url': domain,
-                'use_rtmp': 1,
+
                 'Thumb': self.args['Thumb'],
             })
         self.plugin.end_list()
@@ -863,6 +837,61 @@ class MuchMusic(CTVBaseChannel):
     long_name = 'Much Music'
     base_url = 'http://watch.muchmusic.com/AJAX/'
     swf_url = 'http://watch.muchmusic.com/Flash/player.swf?themeURL=http://watch.muchmusic.com/themes/MuchMusic/player/theme.aspx'
+
+
+    def parse_level_3(self, soup):
+        episode_action = 'browse'
+        #if self.plugin.get_setting('make_playlists') == 'true':
+        #    episode_action = 'play_episode'
+            
+        for li in soup.findAll('li'):
+            a = li.find('a', {'id': re.compile(r'^Episode_\d+')})
+            dl = li.find('dl')
+
+            data = {}
+            data.update(self.args)
+            
+            data.update({
+                'Title': decode_htmlentities(a['title']),
+                'channel': self.short_name,
+            })
+            
+            try:
+                data['Thumb'] = dl.find('dd', {'class': 'Thumbnail'}).find('img')['src']
+            except:
+                pass
+
+            try:
+                data['Plot'] = dl.find('dd', {'class': 'Description'}).contents[0]
+            except:
+                pass
+
+
+
+            if "GetChildPanel('Show'" in a['onclick']:
+                data['action'] = 'browse'
+                data['remote_url'] = 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=2&ShowID=%s' % (a['id'],)
+                data['ShowID'] = a['id']
+
+            elif "GetChildPanel('Season'" in a['onclick']:
+                showid = self.args['ShowID']
+                data['action'] = 'browse'
+                data['remote_url'] = 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=3&SeasonID=%s&ForceParentShowID=%s' % (a['id'], showid)
+                data['ShowID'] = showid
+
+            elif "GetChildPanel('Episode'" in a['onclick']:
+                showid = self.args['ShowID']
+                data['action'] = episode_action 
+                data['remote_url'] = 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=3&ForceParentShowID=%s&EpisodeID=%s' % (showid, a['id'][8:])
+                data['ShowID'] = showid
+
+            yield data    
+    def action_play_clip(self):
+        rurl = "http://esi.ctv.ca/datafeed/urlgenjs.aspx?vid=%s" % (self.args['ClipId'],)
+        parse = URLParser(swf_url=self.swf_url, force_rtmp=not self.plugin.get_setting("awesome_librtmp") == "true")
+        url = parse(get_page(rurl).read().strip()[17:].split("'",1)[0])
+        logging.debug("Playing Stream: %s" % (url,))
+        self.plugin.set_stream_url(url)
 
 
 class Bravo(CTVBaseChannel):

@@ -91,14 +91,9 @@ class BaseChannel(object):
             'action': self.default_action,
             'remote_url': None,
             'channel': self.short_name,
-            'use_rtmp': 1,
+            'use_rtmp': 0,
         }
     
-        if self.status == STATUS_BAD:
-            info['Title'] += " [Bad]"
-            
-        if self.status == STATUS_UGLY:
-            info['Title'] += " [Ugly]"
         
         return info
     
