@@ -1360,7 +1360,7 @@ class CityTV(BrightcoveBaseChannel):
     status = STATUS_BAD
     long_name = "CityTV"
     default_action = "list_shows"
-
+    cache_timeout = 60*10
     def action_play_episode(self):
         url = "http://video.citytv.com" + self.args['remote_url']
         player_id, video_id = self.find_ids(url)
@@ -1369,14 +1369,147 @@ class CityTV(BrightcoveBaseChannel):
         url = parser(clipinfo['FLVFullLengthURL'])
         self.plugin.set_stream_url(url)
         #logging.debug(clipinfo)
+
+    
+    def get_series_page(self, remote_url):
+        fname = urllib.quote_plus(remote_url)
+        cdir = self.plugin.get_cache_dir()
+        cachefilename = os.path.join(cdir, fname)
+        download = True
         
+        if os.path.exists(cachefilename):
+            try:
+                data = simplejson.load(open(cachefilename))
+                timestamp = data['cached_at'] 
+                if time.time() - timestamp < self.cache_timeout:
+                    download = False
+                    logging.debug("Using Cached Copy of: %s" % (remote_url,))
+                    data = data['html']
+            except:
+                pass
         
-     
+        if download:
+            data = get_page("http://video.citytv.com" + remote_url).read()
+            fh = open(cachefilename, 'w')
+            simplejson.dump({'cached_at': time.time(), 'html': data}, fh)
+            fh.close()
+        return data
         
     def action_browse_show(self):
-        url = "http://video.citytv.com/video/" + self.args['remote_url']
-        soup = get_soup(url)
+        html = self.get_series_page(self.args['remote_url'])
+        soup = BeautifulSoup(html)
+        toplevel = self.args.get('toplevel', None)
+        section = self.args.get('section', None)
+        if section:
+            return self.browse_section()
+        elif toplevel:
+            return self.browse_toplevel()
+        else:
+            tabdiv = soup.find("div", {'class': re.compile(r'tabs.*')})
+            toplevels = tabdiv.findAll("a")
+            if len(toplevels) == 1:
+                self.args['toplevel'] = toplevels[0].contents[0].strip()
+                return self.browse_toplevel()
+            else:
+                for a in toplevels:
+                    data = {}
+                    data.update(self.args)
+                    
+                    data['Title'] = data['toplevel'] = a.contents[0].strip()
+                    
+                    self.plugin.add_list_item(data)
+                self.plugin.end_list()
+                
+                
+
+    def parse_episode_list(self, pages):
+        monthnames = ["", "January", "February", "March", 
+                      "April", "May", "June", "July", "August", 
+                      "September", "October", "November", "December"]
         
+        for page in pages:
+            page = self.get_series_page(page)
+            soup = BeautifulSoup(page)
+            div = soup.find('div', {'id': 'episodes'}).find('div', {'class': 'episodes'})
+            for item in div.findAll('div', {'class': re.compile(r'item.*')}):
+                data = {}
+                data.update(self.args)
+                data['action'] = 'play_episode'
+                a = item.find('div', {'class': 'meta'}).h1.a
+                data['Title'] = a.contents[0].strip()
+                data['remote_url'] = a['href']
+                data['Thumb'] = item.find('div', {'class': 'image'}).find('img')['src']
+                yield data
+        
+    def parse_clip_list(self, pages):
+        for page in pages:
+            page = self.get_series_page(page)
+            soup = BeautifulSoup(page)
+            
+            div = soup.find('div', {'id': 'episodes'}).div.find('div', {'class': 'episodes'})
+            for epdiv in div.findAll('div', {'class': 'item'}):
+                data = {}
+                data.update(self.args)
+                data['Thumb'] = epdiv.find('div', {"class": 'image'}).find('img')['src']
+                data['Title'] = epdiv.find('h1').find('a').contents[0].strip()
+                datestr = epdiv.find('h5').contents[0].strip().replace("Aired on ","")
+                m,d,y = datestr.split(" ")
+                m = "%02d" % (monthnames.index(m),)
+                d = d.strip(" ,")
+                
+                data['Date'] = "%s.%s.%s" % (d,m,y)
+                data['Plot'] = epdiv.find('p').contents[0].strip()
+                data['action'] = 'play_episode'
+                data['remote_url'] = epdiv.find('h1').find('a')['href']
+                yield data
+            
+    def browse_section(self):
+        page = self.get_series_page(self.args['remote_url'])
+        soup = BeautifulSoup(page)
+        toplevel = self.args.get('toplevel')
+        if toplevel == 'Full Episodes':
+            div = soup.find("div", {'id': 'episodes'})
+            parser = self.parse_episode_list
+        elif toplevel == 'Video Clips':
+            div = soup.find("div", {'id': 'clips'})
+            parser = self.parse_clip_list
+        paginator = div.find('ul', {'class': 'pagination'})
+        pageas = paginator.findAll('a')
+        pages = [self.args['remote_url']]
+        pages += [a['href'] for a in pageas]
+        items = parser(pages)
+        for item in items:
+            self.plugin.add_list_item(item, is_folder=False)
+        self.plugin.end_list()
+        
+            
+    def browse_toplevel(self):
+        toplevel = self.args['toplevel']
+        page = self.get_series_page(self.args['remote_url'])
+        soup = BeautifulSoup(page)
+        if toplevel == 'Full Episodes':
+            div = soup.find("div", {'id': 'episodes'})
+        elif toplevel == 'Video Clips':
+            div = soup.find("div", {'id': 'clips'})
+            
+        section_div = div.find('div', {'class': 'widget'}).find('div', {'class': 'middle'})
+        sections = section_div.findAll('a')
+        if len(sections) == 1:
+            self.args['section'] = decode_htmlentities(sections[0].contents[0].strip())
+            return self.browse_section()
+        else:
+            for section in sections:
+                data = {}
+                data.update(self.args)
+                data['section'] = decode_htmlentities(section.contents[0].strip())
+                data['remote_url'] = section['href']
+                data['Title'] = data['section']
+                self.plugin.add_list_item(data)
+            self.plugin.end_list()
+
+        return
+        logging.debug("SECTION DIV: %s" % (section_div,))
+
         monthnames = ["", "January", "February", "March", 
                       "April", "May", "June", "July", "August", 
                       "September", "October", "November", "December"]
@@ -1406,7 +1539,7 @@ class CityTV(BrightcoveBaseChannel):
             data = {}
             data.update(self.args)
             data['action'] = 'browse_show'
-            data['remote_url'] = show['url']
+            data['remote_url'] = "/video/" + show['url']
             data['Title'] = decode_htmlentities(show['name'])
             self.plugin.add_list_item(data)
         self.plugin.end_list()
