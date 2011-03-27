@@ -56,6 +56,8 @@ class URLParser(object):
         return app
     
     def clean_playpath(self, playpath):
+        if playpath.startswith("&"):
+            playpath = playpath[1:]
         basename, extension = os.path.splitext(playpath)
         
         if extension.lower() in ('.flv',''):

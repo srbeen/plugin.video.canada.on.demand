@@ -3,9 +3,80 @@ import datetime
 import simplejson
 from channel import BaseChannel, ChannelException,ChannelMetaClass, STATUS_BAD, STATUS_GOOD, STATUS_UGLY
 from utils import *
+import httplib
 import xbmcplugin
-#from pyamf import remoting
 
+try:
+    from pyamf import remoting
+    has_pyamf = True
+except ImportError:
+    has_pyamf = False
+    
+class BrightcoveBaseChannel(BaseChannel):
+    is_abstract = True
+    def get_clip_info(self, player_id, video_id):
+        conn = httplib.HTTPConnection("c.brightcove.com")
+        envelope = self.build_amf_request(player_id, video_id)
+        conn.request("POST", "/services/amfgateway", str(remoting.encode(envelope).read()), {'content-type': 'application/x-amf'})
+        response = conn.getresponse().read()
+        response = remoting.decode(response).bodies[0][1].body[0]['data']['videoDTO']
+        return response
+   
+        
+    def build_amf_request_body(self, player_id, video_id):
+        return [
+            player_id,
+            {
+                'optimizeFeaturedContent': 1, 
+                'featuredLineupFetchInfo': {
+                    'fetchLevelEnum': 4, 
+                    'contentType': u'VideoLineup', 
+                    'childLimit': 100
+                }, 
+                'lineupRefId': None, 
+                'videoId': video_id, 
+                'videoRefId': None, 
+                'lineupId': None, 
+                'fetchInfos': [
+                    {'fetchLevelEnum': 1, 'contentType': u'VideoLineup', 'childLimit': 100}, 
+                    {'grandchildLimit': 100, 'fetchLevelEnum': 3, 'contentType': u'VideoLineupList', 'childLimit': 100}
+                ]
+            }
+        ]
+
+
+    def build_amf_request(self, player_id, video_id):
+        env = remoting.Envelope(amfVersion=0)
+        env.bodies.append(
+            (
+                "/2", 
+                remoting.Request(
+                    target="com.brightcove.templating.TemplatingFacade.getContentForTemplateInstance", 
+                    body=self.build_amf_request_body(player_id, video_id),
+                    envelope=env
+                )
+            )
+        )
+        return env
+
+
+    def find_ids(self, url):
+        soup = get_soup(url)
+        try:
+            player_id = int(soup.find("object").find("param", {"name": "playerID"})['value'])
+        except:
+            player_id = None
+            
+        try:
+            video_id = int(soup.find('object').find("param", {"name": "@videoPlayer"})['value'])
+        except:
+            video_id = None
+        
+        return player_id, video_id
+    
+    
+        
+        
 class ThePlatformBaseChannel(BaseChannel):
     is_abstract = True
     base_url = None
@@ -1282,18 +1353,25 @@ class CMT(BaseChannel):
 
         self.plugin.end_list()
         
-class CityTV(BaseChannel):
+
+
+class CityTV(BrightcoveBaseChannel):
     short_name = 'city'
-    long_name = "CityTV [Broken]"
+    status = STATUS_BAD
+    long_name = "CityTV"
     default_action = "list_shows"
-    
+
     def action_play_episode(self):
         url = "http://video.citytv.com" + self.args['remote_url']
-        soup = get_soup(url)
-        obj = soup.find("object", {'id': re.compile(r"myExperience.*")})
-        player_id = obj.find('param', {'name': 'playerID'})['value']
-        video_id = obj.find('param', {'name': '@videoPlayer'})['value']
-        logging.debug("EPINFO: %s, %s" % (player_id, video_id))
+        player_id, video_id = self.find_ids(url)
+        clipinfo = self.get_clip_info(player_id, video_id)
+        parser = URLParser()
+        url = parser(clipinfo['FLVFullLengthURL'])
+        self.plugin.set_stream_url(url)
+        #logging.debug(clipinfo)
+        
+        
+     
         
     def action_browse_show(self):
         url = "http://video.citytv.com/video/" + self.args['remote_url']
@@ -1318,7 +1396,7 @@ class CityTV(BaseChannel):
             data['Plot'] = epdiv.find('p').contents[0].strip()
             data['action'] = 'play_episode'
             data['remote_url'] = epdiv.find('h1').find('a')['href']
-            self.plugin.add_list_item(data)
+            self.plugin.add_list_item(data, is_folder=False)
         self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE, xbmcplugin.SORT_METHOD_LABEL])
         
     def action_list_shows(self):
