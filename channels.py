@@ -4,6 +4,8 @@ import simplejson
 from channel import BaseChannel, ChannelException,ChannelMetaClass, STATUS_BAD, STATUS_GOOD, STATUS_UGLY
 from utils import *
 import xbmcplugin
+from pyamf import remoting
+
 class ThePlatformBaseChannel(BaseChannel):
     is_abstract = True
     base_url = None
@@ -269,8 +271,10 @@ class ThePlatformBaseChannel(BaseChannel):
         }
 
 
+    
+    
 class CTVBaseChannel(BaseChannel):
-    status = STATUS_BAD
+    status = STATUS_GOOD
     is_abstract = True
     root_url = 'VideoLibraryWithFrame.aspx'
     default_action = 'root'
@@ -1276,4 +1280,55 @@ class CMT(BaseChannel):
         data['action'] = 'search'
         self.plugin.add_list_item(data)
 
+        self.plugin.end_list()
+        
+class CityTV(BaseChannel):
+    short_name = 'city'
+    long_name = "CityTV [Broken]"
+    default_action = "list_shows"
+    
+    def action_play_episode(self):
+        url = "http://video.citytv.com" + self.args['remote_url']
+        soup = get_soup(url)
+        obj = soup.find("object", {'id': re.compile(r"myExperience.*")})
+        player_id = obj.find('param', {'name': 'playerID'})['value']
+        video_id = obj.find('param', {'name': '@videoPlayer'})['value']
+        logging.debug("EPINFO: %s, %s" % (player_id, video_id))
+        
+    def action_browse_show(self):
+        url = "http://video.citytv.com/video/" + self.args['remote_url']
+        soup = get_soup(url)
+        
+        monthnames = ["", "January", "February", "March", 
+                      "April", "May", "June", "July", "August", 
+                      "September", "October", "November", "December"]
+        
+        div = soup.find('div', {'id': 'episodes'}).div.find('div', {'class': 'episodes'})
+        for epdiv in div.findAll('div', {'class': 'item'}):
+            data = {}
+            data.update(self.args)
+            data['Thumb'] = epdiv.find('div', {"class": 'image'}).find('img')['src']
+            data['Title'] = epdiv.find('h1').find('a').contents[0].strip()
+            datestr = epdiv.find('h5').contents[0].strip().replace("Aired on ","")
+            m,d,y = datestr.split(" ")
+            m = "%02d" % (monthnames.index(m),)
+            d = d.strip(" ,")
+            
+            data['Date'] = "%s.%s.%s" % (d,m,y)
+            data['Plot'] = epdiv.find('p').contents[0].strip()
+            data['action'] = 'play_episode'
+            data['remote_url'] = epdiv.find('h1').find('a')['href']
+            self.plugin.add_list_item(data)
+        self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE, xbmcplugin.SORT_METHOD_LABEL])
+        
+    def action_list_shows(self):
+        url = "http://video.citytv.com/video/json.htm?media=shows&N=0&Nr=AND(Src:Endeca,OR(Src:citytv,Src:cityline))"
+        showdata = simplejson.load(get_page(url))
+        for show in showdata['shows']:
+            data = {}
+            data.update(self.args)
+            data['action'] = 'browse_show'
+            data['remote_url'] = show['url']
+            data['Title'] = decode_htmlentities(show['name'])
+            self.plugin.add_list_item(data)
         self.plugin.end_list()
