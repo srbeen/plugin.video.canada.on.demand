@@ -3,8 +3,9 @@
     <string id="30001">HTTP Proxy Server</string>
     <string id="30002">HTTP Proxy Server port</string>
     <string id="30003">Hide Channels Worse Than</string>
-    <string id="30004">Automatically Play All Clips(SVN 32470+)</string>
+    <string id="30004">Automatically Play Multiple Clips(SVN 32470+)</string>
     <string id="30005">Maximum Bitrate</string>
     <string id="30006">My librtmp is Awesome!</string>
+    <string id="30007">Maximum # of clips to join</string>
 
 </strings>

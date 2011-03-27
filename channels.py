@@ -1,8 +1,9 @@
 import time
+import datetime
 import simplejson
 from channel import BaseChannel, ChannelException,ChannelMetaClass, STATUS_BAD, STATUS_GOOD, STATUS_UGLY
 from utils import *
-
+import xbmcplugin
 class ThePlatformBaseChannel(BaseChannel):
     is_abstract = True
     base_url = None
@@ -268,157 +269,154 @@ class ThePlatformBaseChannel(BaseChannel):
         }
 
 
-
 class CTVBaseChannel(BaseChannel):
-    status = STATUS_GOOD
+    status = STATUS_BAD
     is_abstract = True
     root_url = 'VideoLibraryWithFrame.aspx'
+    default_action = 'root'
     
-    def action_play_clip(self):
-        rurl = "http://esi.ctv.ca/datafeed/urlgenjs.aspx?vid=%s" % (self.args['ClipId'],)
-        parse = URLParser(swf_url=self.swf_url, force_rtmp=not self.plugin.get_setting("awesome_librtmp") == "true")
+    def action_root(self):
+        url = self.base_url + self.root_url
+        soup = get_soup(url)
+        ul = soup.find('div', {'id': 'Level1'}).find('ul')
+        for li in ul.findAll('li'):
+            data = {}
+            data.update(self.args)
+            data['Title'] = decode_htmlentities(li.a['title'])
+            data['action'] = 'browse_show'
+            data['show_id'] = li.a['id']
+            self.plugin.add_list_item(data)
+        self.plugin.end_list()
         
-        url = parse(get_page(rurl).read().strip()[17:].split("'",1)[0])
-        logging.debug("Playing Stream: %s" % (url,))
-        self.plugin.set_stream_url(url)
-
-
-
+    def action_browse_season(self):
+        url = "http://esi.ctv.ca/datafeed/pubsetservice.aspx?sid=" + self.args['season_id']
+        page = get_page(url).read()
+        soup = BeautifulStoneSoup(page)
+        for ep in soup.overdrive.gateway.contents:
+            logging.debug("ASDF: %s" % (ep.contents,))
+            if not ep.playlist.contents:
+                continue
+            data = {}
+            data.update(self.args)
+            data['Title'] = ep.meta.headline.contents[0].strip()
+            data['Plot'] = ep.meta.subhead.contents[0].strip()
+            m,d,y = ep['pubdate'].split("/")
+            data['Date'] = "%s.%s.%s" % (d,m,y)
+            try:
+                data['Thumb'] = ep.meta.image.contents[0].strip()
+            except:
+                pass
+            
+            data['videocount'] = ep['videocount']
+            vc = int(ep['videocount'])
+            if vc == 1:
+                action = 'play_episode'
+            elif vc <= int(self.plugin.get_setting('max_playlist_size')) \
+                 and self.plugin.get_setting("make_playlists") == "true":
+                action = 'play_episode'
+            else:
+                action = 'browse_episode'
+            data['action'] = action
+            data['episode_id'] = ep['id']
+            self.plugin.add_list_item(data, is_folder=vc != 1)
+        self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE, xbmcplugin.SORT_METHOD_LABEL])
+        
     def action_play_episode(self):
         import xbmc
-        rurl = self.get_url(self.args['remote_url'])
-        div = get_soup(rurl).find('div', {'id': re.compile('^Level\d$')})
-        levelclass = [c for c in re.split(r"\s+", div['class']) if c.startswith("Level")][0]
-        levelclass = levelclass[5:]
-        if levelclass != '4': # Browsing at the clip level
-            raise ChannelException("An error occured trying to play a full episode,try turning off the 'Automatically Play All Clips' setting")
+        vidcount = self.args.get('videocount')
+        if vidcount:
+            vidcount = int(vidcount)
         
-        parser = getattr(self, 'parse_level_%s' % (levelclass,))
-        playlist = xbmc.PlayList(1)
-        playlist.clear()
-        
-        for item in parser(div):
-            if item.get('playable', False):
-                url = self.plugin.get_url(item)
-                li = self.plugin.add_list_item(item, is_folder=False, return_only=True)
-                playlist.add(url, li)
-        xbmc.Player().play(playlist)
-        xbmc.executebuiltin('XBMC.ActivateWindow(fullscreenvideo)')
+        if vidcount  and vidcount == 1:
+            data = list(self.iter_clip_list())[0]
+            logging.debug(data)
+            url = self.clipid_to_stream_url(data['clip_id'])
+            return self.plugin.set_stream_url(url, data)
+        else:
+            playlist = xbmc.PlayList(1)
+            playlist.clear()
+            for clipdata in self.iter_clip_list():
+                url = self.plugin.get_url(clipdata)
+                li = self.plugin.add_list_item(clipdata, is_folder=False, return_only=True)
+                ok = playlist.add(url, li)
+                logging.debug("CLIPDATA: %s, %s, %s, %s" % (clipdata, url, li, ok))
+            
+            time.sleep(1)
+            logging.debug("CLIPDATA: %s" % (playlist,))
+            xbmc.Player().play(playlist)
+            xbmc.executebuiltin('XBMC.ActivateWindow(fullscreenvideo)')
+            self.plugin.end_list()
 
-    def action_browse(self):
-        rurl = self.get_url(self.args['remote_url'])
-        div = get_soup(rurl).find('div', {'id': re.compile('^Level\d$')})
-        levelclass = [c for c in re.split(r"\s+", div['class']) if c.startswith("Level")][0]
-        levelclass = levelclass[5:]
-        
-        parser = getattr(self, 'parse_level_%s' % (levelclass,))
-        logging.debug("Parse Level %s" % (levelclass,))
-        for item in parser(div):
-            if item.get('playable', False):
-                self.plugin.add_list_item(item, is_folder=False)
-            else:
-                self.plugin.add_list_item(item)
-        self.plugin.end_list()
-
-
-    def parse_level_4(self, soup):
-        for li in soup.findAll('li'):
-            a = li.find('dl', {"class": "Item"}).dt.a
+    def iter_clip_list(self):
+        url = "http://esi.ctv.ca/datafeed/content.aspx?cid=" + self.args['episode_id']
+        page = get_page(url).read()
+        soup = BeautifulStoneSoup(page)
+        logging.debug(soup)
+        plot = soup.find('content').meta.subhead.contents[0].strip()
+                             
+        for el in soup.find('playlist').findAll('element'):
             data = {}
             data.update(self.args)
-            data.update(parse_bad_json(a['onclick'][45:-16]))
-            data['channel'] = self.short_name
             data['action'] = 'play_clip'
-            data['Rating'] = 0.0 # the data in level4 already contains a rating. 
-                                    # There was a crash which I THOUGHT was caused by 
-                                    # the rating being a string instead of a float and
-                                    # i'm not sure if it will crash or not if I remove it.
-                                    # I'm making the comment extra large to remind myself
-                                    # to check if its okay to remove.
-
-            data['playable'] = True
+            data['Title'] = el.title.contents[0].strip()
+            data['Plot'] = plot
+            data['clip_id'] = el['id']
             yield data
-
-
-
-
-    def parse_level_3(self, soup):
-        episode_action = 'browse'
-        if self.plugin.get_setting('make_playlists') == 'true':
-            episode_action = 'play_episode'
             
-        for li in soup.findAll('li'):
-            a = li.find('a', {'id': re.compile(r'^Episode_\d+')})
-            dl = li.find('dl')
-
-            data = {}
-            data.update(self.args)
-            
-            data.update({
-                'Title': decode_htmlentities(a['title']),
-                'channel': self.short_name,
-            })
-            
-            try:
-                data['Thumb'] = dl.find('dd', {'class': 'Thumbnail'}).find('img')['src']
-            except:
-                pass
-
-            try:
-                data['Plot'] = dl.find('dd', {'class': 'Description'}).contents[0]
-            except:
-                pass
-
-
-
-            if "GetChildPanel('Show'" in a['onclick']:
-                data['action'] = 'browse'
-                data['remote_url'] = 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=2&ShowID=%s' % (a['id'],)
-                data['ShowID'] = a['id']
-
-            elif "GetChildPanel('Season'" in a['onclick']:
-                showid = self.args['ShowID']
-                data['action'] = 'browse'
-                data['remote_url'] = 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=3&SeasonID=%s&ForceParentShowID=%s' % (a['id'], showid)
-                data['ShowID'] = showid
-
-            elif "GetChildPanel('Episode'" in a['onclick']:
-                showid = self.args['ShowID']
-                data['action'] = episode_action 
-                data['remote_url'] = 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=3&ForceParentShowID=%s&EpisodeID=%s' % (showid, a['id'][8:])
-                data['ShowID'] = showid
-
-            yield data
-
-    def parse_level_1(self, div):
-
-        for a in div.findAll('a'):
-            data = {}
-            data.update(self.args)
-            data.update({
-                'Title': decode_htmlentities(a['title']),
-                'channel': self.short_name,
-            })
-
-            if "GetChildPanel('Show'" in a['onclick']:
-                data['action'] = 'browse'
-                data['remote_url'] = 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=2&ShowID=%s' % (a['id'],)
-                data['ShowID'] = a['id']
-
-            elif "GetChildPanel('Season'" in a['onclick']:
-                showid = self.args['ShowID']
-                data['action'] = 'browse'
-                data['remote_url'] = 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=3&SeasonID=%s&ForceParentShowID=%s' % (a['id'], showid)
-                data['ShowID'] = showid
-
-            elif "GetChildPanel('Episode'" in a['onclick']:
-                showid = self.args['ShowID']
-                data['action'] = 'browse'
-                data['remote_url'] = 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=3&ForceParentShowID=%s&EpisodeID=%s' % (showid, a['id'][8:])
-                data['ShowID'] = showid
-
-            yield data
-
+    def action_browse_episode(self):
+        logging.debug("ID: %s" % (self.args['episode_id'],))
+        for data in self.iter_clip_list():
+            self.plugin.add_list_item(data, is_folder=False)
+        self.plugin.end_list()
+        
+        
+    def action_browse_show(self):
+        url = self.base_url + 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=2&ShowID=%s' % (self.args['show_id'],)
+        soup = get_soup(url)
+        div = soup.find('div',{'id': re.compile('^Level\d$')})
+        levelclass = [c for c in re.split(r"\s+", div['class']) if c.startswith("Level")][0]
+        levelclass = int(levelclass[5:])
+        if levelclass == 4:
+            # Sites like TSN Always return level4 after the top level
+            for li in soup.findAll('li'):
+                a = li.find('dl', {"class": "Item"}).dt.a
+                data = {}
+                data.update(self.args)
+                data.update(parse_bad_json(a['onclick'][45:-16]))
+                data['action'] = 'play_clip'
+                data['clip_id'] = data['ClipId']
+                self.plugin.add_list_item(data, is_folder=False)
+            self.plugin.end_list()
+        
+        else:
+            for li in soup.find('ul').findAll('li'):
+                a = li.find('a')
+                is_folder = True
+                data = {}
+                data.update(self.args)
+                if "Interface.GetChildPanel('Season'" in a['onclick']:
+                    data['action'] = 'browse_season'
+                    data['season_id'] = a['id']
+                elif "Interface.GetChildPanel('Episode'" in a['onclick']:
+                    data['action'] = 'browse_episode'
+                    if self.plugin.get_setting("make_playlists") == "true":
+                        data['action'] = 'play_episode'
+                    data['episode_id'] = a['id'][8:]
+                data['Title'] = decode_htmlentities(a['title'])
+                self.plugin.add_list_item(data)
+            self.plugin.end_list()
+        
+    def clipid_to_stream_url(self, clipid):
+        rurl = "http://esi.ctv.ca/datafeed/urlgenjs.aspx?vid=%s" % (clipid)
+        parse = URLParser(swf_url=self.swf_url, force_rtmp=not self.plugin.get_setting("awesome_librtmp") == "true")        
+        url = parse(get_page(rurl).read().strip()[17:].split("'",1)[0])
+        return url
+    
+    def action_play_clip(self):
+        url = self.clipid_to_stream_url(self.args['clip_id'])
+        logging.debug("Playing Stream: %s" % (url,))
+        self.plugin.set_stream_url(url)
+        
 
 
 class CanwestBaseChannel(ThePlatformBaseChannel):
@@ -596,6 +594,7 @@ class CTVLocalNews(CTVBaseChannel):
                 data.update({
                     'action': 'play_clip',
                     'remote_url': data['ClipId'],
+                    'clip_id': data['ClipId']
                 })
                 self.plugin.add_list_item(data, is_folder=False)
         self.plugin.end_list()
@@ -818,12 +817,16 @@ class Discovery(CTVBaseChannel):
     swf_url = 'http://watch.discoverychannel.ca/Flash/player.swf?themeURL=http://watch.discoverychannel.ca/themes/Discoverynew/player/theme.aspx'
 
 
+
+
 class ComedyNetwork(CTVBaseChannel):
     status = STATUS_UGLY
     short_name = 'comedynetwork'
     base_url = 'http://watch.thecomedynetwork.ca/AJAX/'
     long_name = 'The Comedy Network'
     swf_url = 'http://watch.thecomedynetwork.ca/Flash/player.swf?themeURL=http://watch.thecomedynetwork.ca/themes/Comedy/player/theme.aspx'
+
+
 
 class Space(CTVBaseChannel):
     short_name = 'space'
@@ -838,60 +841,6 @@ class MuchMusic(CTVBaseChannel):
     base_url = 'http://watch.muchmusic.com/AJAX/'
     swf_url = 'http://watch.muchmusic.com/Flash/player.swf?themeURL=http://watch.muchmusic.com/themes/MuchMusic/player/theme.aspx'
 
-
-    def parse_level_3(self, soup):
-        episode_action = 'browse'
-        #if self.plugin.get_setting('make_playlists') == 'true':
-        #    episode_action = 'play_episode'
-            
-        for li in soup.findAll('li'):
-            a = li.find('a', {'id': re.compile(r'^Episode_\d+')})
-            dl = li.find('dl')
-
-            data = {}
-            data.update(self.args)
-            
-            data.update({
-                'Title': decode_htmlentities(a['title']),
-                'channel': self.short_name,
-            })
-            
-            try:
-                data['Thumb'] = dl.find('dd', {'class': 'Thumbnail'}).find('img')['src']
-            except:
-                pass
-
-            try:
-                data['Plot'] = dl.find('dd', {'class': 'Description'}).contents[0]
-            except:
-                pass
-
-
-
-            if "GetChildPanel('Show'" in a['onclick']:
-                data['action'] = 'browse'
-                data['remote_url'] = 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=2&ShowID=%s' % (a['id'],)
-                data['ShowID'] = a['id']
-
-            elif "GetChildPanel('Season'" in a['onclick']:
-                showid = self.args['ShowID']
-                data['action'] = 'browse'
-                data['remote_url'] = 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=3&SeasonID=%s&ForceParentShowID=%s' % (a['id'], showid)
-                data['ShowID'] = showid
-
-            elif "GetChildPanel('Episode'" in a['onclick']:
-                showid = self.args['ShowID']
-                data['action'] = episode_action 
-                data['remote_url'] = 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=3&ForceParentShowID=%s&EpisodeID=%s' % (showid, a['id'][8:])
-                data['ShowID'] = showid
-
-            yield data    
-    def action_play_clip(self):
-        rurl = "http://esi.ctv.ca/datafeed/urlgenjs.aspx?vid=%s" % (self.args['ClipId'],)
-        parse = URLParser(swf_url=self.swf_url, force_rtmp=not self.plugin.get_setting("awesome_librtmp") == "true")
-        url = parse(get_page(rurl).read().strip()[17:].split("'",1)[0])
-        logging.debug("Playing Stream: %s" % (url,))
-        self.plugin.set_stream_url(url)
 
 
 class Bravo(CTVBaseChannel):

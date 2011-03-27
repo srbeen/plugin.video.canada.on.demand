@@ -1,3 +1,5 @@
+0.4.0 - Added a new Backend for CTV Channels. 
+
 0.3.8 - Added support for XBMCs with awesome librtmp support
       - removed the use_rtmp context menu entry, now we just use it
         on the channels that it works for, if your librtmp isnt awesome

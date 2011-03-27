@@ -15,8 +15,8 @@ except:
 __plugin__ = "Canada On Demand"
 __author__ = 'Andre,Renaud  {andrepleblanc,renaudtrudel}@gmail.com'
 __url__ = 'http://github.com/andrepl/plugin.video.canada.on.demand/'
-__date__ = '03-25-2011'
-__version__ = '0.3.8'
+__date__ = '03-26-2011'
+__version__ = '0.4.0'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
 
@@ -110,7 +110,7 @@ class OnDemandPlugin(object):
             sort_methods = (xbmcplugin.SORT_METHOD_NONE,)
         
         for sm in sort_methods:
-            xbmcplugin.addSortMethod(self.handle, *sort_methods)        
+            xbmcplugin.addSortMethod(self.handle, sm)        
         xbmcplugin.endOfDirectory(self.handle, succeeded=True)
 
 
