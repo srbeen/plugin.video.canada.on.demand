@@ -1,3 +1,5 @@
+0.4.3 - fixed crash bug
+
 0.4.2 - Marked All CTV Channels as Good instead of Bad
 
 0.4.1 - Added CMT

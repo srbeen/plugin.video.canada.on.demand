@@ -4,7 +4,7 @@ import simplejson
 from channel import BaseChannel, ChannelException,ChannelMetaClass, STATUS_BAD, STATUS_GOOD, STATUS_UGLY
 from utils import *
 import xbmcplugin
-from pyamf import remoting
+#from pyamf import remoting
 
 class ThePlatformBaseChannel(BaseChannel):
     is_abstract = True
