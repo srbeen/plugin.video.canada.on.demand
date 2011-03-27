@@ -1,3 +1,5 @@
+0.4.1 - Added CMT
+
 0.4.0 - Added a new Backend for CTV Channels. 
 
 0.3.8 - Added support for XBMCs with awesome librtmp support

@@ -817,8 +817,6 @@ class Discovery(CTVBaseChannel):
     swf_url = 'http://watch.discoverychannel.ca/Flash/player.swf?themeURL=http://watch.discoverychannel.ca/themes/Discoverynew/player/theme.aspx'
 
 
-
-
 class ComedyNetwork(CTVBaseChannel):
     status = STATUS_UGLY
     short_name = 'comedynetwork'
@@ -1119,6 +1117,7 @@ class Family(BaseChannel):
         self.plugin.end_list()
         
     def action_root(self):
+        
         soup = get_soup(self.base_url + "/video/")
         logging.debug(soup)
         div = soup.find('div', {'id': 'categoryList'})
@@ -1135,4 +1134,146 @@ class Family(BaseChannel):
             data['action'] = 'browse_category'
             data['id'] = a['href'].split("(",1)[1].split(",")[0]
             self.plugin.add_list_item(data)
+        self.plugin.end_list()
+        
+class CMT(BaseChannel):
+    default_action = 'root'
+    short_name = 'cmt'
+    long_name = 'Country Music Television'
+    cache_timeout = 60*15 #seconds
+    
+    def get_cached_page(self):
+        cachedir = self.plugin.get_cache_dir()
+        cachefilename = os.path.join(cachedir, 'cmt.cache')
+        download = True
+        if os.path.exists(cachefilename):
+            try:
+                data = simplejson.load(open(cachefilename))
+                timestamp = data['cached_at'] 
+                if time.time() - timestamp < self.cache_timeout:
+                    download = False
+                    data = data['html']
+            except:
+                pass
+        
+        if download:
+            data = get_page("http://www.cmt.ca/musicvideos/").read()
+            fh = open(cachefilename, 'w')
+            simplejson.dump({'cached_at': time.time(), 'html': data}, fh)
+            fh.close()
+            
+        return data
+                    
+
+    def action_play_video(self):
+        url = "http://video.music.yahoo.com/up/fop/process/getPlaylistFOP.php?node_id=v" + self.args.get('video_id')
+        page = get_page(url).read()
+        soup = BeautifulStoneSoup(page)
+        tag = soup.find('stream')
+        url = tag['app']
+        url += tag['fullpath']
+        parse = URLParser(swf_url='http://d.yimg.com/cosmos.bcst.yahoo.com/up/fop/embedflv/swf/fop.swf')
+        url = parse(url)
+        return self.plugin.set_stream_url(url)
+        
+    def action_newest(self):
+        soup = BeautifulSoup(self.get_cached_page())
+        div = soup.find("div", {'id': 'Newest'})
+        self.list_videos(div)
+    
+        
+    def action_browse_genre(self):
+        url = "http://www.cmt.ca/musicvideos/Category.aspx?id=%s" % (self.args['genre'],)
+        soup = get_soup(url)
+        div = soup.find("div", {'class': 'yahooCategory'})
+        self.list_videos(div)
+        
+    def action_genres(self):
+        soup = BeautifulSoup(self.get_cached_page())
+        div = soup.find("div", {'id': 'Genre'})
+        for tr in div.findAll('tr'):
+            data = {}
+            data.update(self.args)
+            a = tr.find('a')
+            try:
+                data['Title'] = decode_htmlentities(a.contents[0].strip())
+            except:
+                continue
+            data['action'] = 'browse_genre'
+            data['genre'] = a['onclick'].rsplit("?",1)[1][:-1][3:]
+            self.plugin.add_list_item(data)
+        self.plugin.end_list()
+
+            
+            
+    def list_videos(self, div):
+        for li in div.findAll('li'):
+            data = {}
+            data.update(self.args)
+            data['action'] = 'play_video'
+            data['Thumb'] = li.find('img')['src']
+            links = li.findAll('a')
+            title, artist = links[1:]            
+            data['video_id'] = re.search(r"videoId=v(\d+)", title['href']).groups()[0]
+            title = title.contents[0].strip()
+            artist = artist.contents[0].strip()
+            
+            data['Title'] = "%s - %s" % (artist, title)
+            self.plugin.add_list_item(data, is_folder=False)
+        self.plugin.end_list()
+        
+    def action_search(self):
+        page = self.get_cached_page()
+        soup = BeautifulSoup(page)
+        viewstate = soup.find('input', {'id': '__VIEWSTATE'})['value']
+        logging.debug("VIEWSTATE: %s" % (viewstate,))
+        search_string = self.plugin.get_modal_keyboard_input("", "Enter a Full or Partial Artist Name")
+        request = urllib2.Request(
+            "http://www.cmt.ca/musicvideos/default.aspx", 
+            urllib.urlencode({
+                '__VIEWSTATE': viewstate,
+                'in_txtSearch': search_string,
+                'hd_activeTab': 0,
+                'btnSearch.x': 0,
+                'btnSearch.y': 0,
+                '__SCROLLPOSITIONX': 0,
+                '__SCROLLPOSITIONY': 0,
+                '__EVENTTARGET': '',
+                '__EVENTARGUMENT': '',
+            })
+        )
+        logging.debug(request.data)
+        page = urllib2.urlopen(request).read()
+        soup = BeautifulSoup(page)
+        
+        div = soup.find("div", {'id': 'Artist'})
+        logging.debug(div)
+        self.list_videos(div)
+        
+    def action_most_popular(self):
+        soup = BeautifulSoup(self.get_cached_page())
+        div = soup.find("div", {'id': 'Popular'})
+        self.list_videos(div)
+        
+        
+    def action_root(self):
+        data = {}
+        data.update(self.args)
+
+        data['Title'] = 'Most Popular Videos'
+        data['action'] = 'most_popular'
+        self.plugin.add_list_item(data)
+
+        data['Title'] = 'Newest'
+        data['action'] = 'newest'
+        self.plugin.add_list_item(data)
+        
+        data['Title'] = 'Genres'
+        data['action'] = 'genres'
+        self.plugin.add_list_item(data)
+
+        data['Title'] = 'Search'
+        data['action'] = 'search'
+        self.plugin.add_list_item(data)
+
         self.plugin.end_list()
