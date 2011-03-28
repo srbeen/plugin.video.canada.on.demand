@@ -1,11 +1,12 @@
 import time
+import cgi
 import datetime
 import simplejson
 from channel import BaseChannel, ChannelException,ChannelMetaClass, STATUS_BAD, STATUS_GOOD, STATUS_UGLY
 from utils import *
 import httplib
 import xbmcplugin
-
+import xbmc
 try:
     from pyamf import remoting
     has_pyamf = True
@@ -14,6 +15,172 @@ except ImportError:
     
 class BrightcoveBaseChannel(BaseChannel):
     is_abstract = True
+    tm_identity = "P-RS5-841"
+    tm_bootloader = "B-0Y9-YVC"
+    
+    def do_stream_setup(self, stream_url):
+        xml = self.get_stream_setup_xml(stream_url)
+        conn = httplib.HTTPConnection('localhost:8888')
+        conn.request("POST", 'http://' + self.keepalive_domain_name + self.keepalive_relative_url, xml, {'content-type': 'text/xml',
+                                                                'cookie': '_tmid=%s; _tmcm="%s"; _ds=%s' % (self._tmid, 'Z29vZ2xlOjIwMTEwNDI2fHRhcmd1czoyMDExMDQyNg==', self._ds),
+                                                                'referer': 'http://static.inplay.tubemogul.com/core/core-as3-v4.4.0.swf?playerID=%s&bootloaderID=%s' % (self.tm_identity, self.tm_bootloader)})
+        resp = conn.getresponse()
+        response = resp.read()
+        soup = BeautifulStoneSoup(response)
+        self.stream_id = soup.find('streamsetupresponse')['streamid']        
+        logging.debug("GOT STREAM ID: %s" % (self.stream_id,))
+        self.transport_seq_id = 2
+        self.last_end_time = 0
+        
+        
+        
+    def get_stream_setup_xml(self, stream_url):
+        return """<StreamMiner xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="4" xmlns="http://www.illumenix.com/StreamReceiver/services/schemas" xsi:schemaLocation="http://www.illumenix.com/StreamReceiver/services/schemas streamminer.xsd">
+	<Header transportSequenceID="1">
+		<To>
+			<Credential domain="authID">
+				<Identity>%s</Identity>
+			</Credential>
+		</To>
+	</Header>
+	<Request>
+		<StreamSetupRequest playerInstanceID="%s" type="Generic">
+			<StreamReport actionType="new">
+				<AutoPlay>false</AutoPlay>
+				<InitialVolume>0</InitialVolume>
+				<VideoInfo>
+					<SitePublisherID>%s</SitePublisherID>
+					<SiteVideoID>%s</SiteVideoID>
+					<EncodingRate UOM="kbps">0</EncodingRate>
+					<CODEC>avc1</CODEC>
+					<FileURL>%s</FileURL>
+					<FileDuration UOM="SECONDS">%s</FileDuration>
+					<FileSize UOM="bytes">0</FileSize>
+					<DisplayName>%s</DisplayName>
+					<DeliveryMethod>RTMP</DeliveryMethod>
+				</VideoInfo>
+				<ViewCounted>0</ViewCounted>
+				<StartDelay>0.078</StartDelay>
+				<BytesReceived>0</BytesReceived>
+				<BytesViewed>0</BytesViewed>
+				<BytesWasted>0</BytesWasted>
+			</StreamReport>
+			<Trackers>
+				<TrackerID>TR-CWR-QWO</TrackerID>
+				<TrackerID>TR-57Q-1D5</TrackerID>
+			</Trackers>
+		</StreamSetupRequest>
+	</Request>
+</StreamMiner>""" % (self.tm_identity, self.player_instance_id, self.publisher_id, self.video_id, cgi.escape(stream_url), self.video_length, self.args['Title'])
+        
+    def do_player_setup(self, browser_url):
+        xml = self.get_player_setup_xml(browser_url)
+        conn = httplib.HTTPConnection('localhost:8888')
+        conn.request("POST", "http://receive.inplay.tubemogul.com/StreamReceiver/services", xml, {'content-type': 'text/xml'})
+        response = conn.getresponse()
+        bodysoup = BeautifulStoneSoup(response.read())
+        self.player_instance_id = bodysoup.findAll('playersetupresponse')[0]['playerinstanceid']
+        serverconf = bodysoup.find("serverconfig")
+        protocol = serverconf.find("protocol").contents[0].strip()
+        domain_name = serverconf.find("domainname").contents[0].strip()
+        relative_url = serverconf.find("relativeurl").contents[0].strip()
+        self.keepalive_domain_name = domain_name
+        self.keepalive_relative_url = relative_url
+        self.keep_alive_url = "%s://%s%s" % (protocol, domain_name, relative_url)
+        cookieline = response.getheader('set-cookie')
+        logging.debug(cookieline)
+        cookiedata = cookieline.split(";")[0]
+        key, val = cookiedata.split("=",1)
+        if key == '_tmid':
+            self._tmid = val
+        logging.debug("COOKIE: %s" % (cookieline))
+        logging.debug("INSTANCE: %s" % (self.player_instance_id,))
+        logging.debug("URL: %s" % (self.keep_alive_url,))
+        conn = httplib.HTTPConnection('localhost:8888')
+        conn.request("GET", "http://receive.inplay.tubemogul.com/StreamReceiver/demo?segment=000&zip=&age=&gender=", headers={'cookie': '_tmid=%s; _tmcm="%s"' % (self._tmid, 'Z29vZ2xlOjIwMTEwNDI2fHRhcmd1czoyMDExMDQyNg==')})
+        resp = conn.getresponse()
+        headers = resp.getheaders()
+        self._ds = resp.getheader('set-cookie').split(";",1)[0].split("=",1)[1]
+        logging.debug("DEMOCOOKIE: %s" % (self._ds,))
+    
+    
+    def do_keepalive(self):
+        playtime = int(xbmc.Player().getTime())
+        seq_id = self.transport_seq_id - 2
+        start_time = self.last_end_time
+        end_time = playtime
+        self.last_end_time = end_time
+        xml = """<StreamMiner version="4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.illumenix.com/StreamReceiver/services/schemas" xsi:schemaLocation="http://www.illumenix.com/StreamReceiver/services/schemas streamminer.xsd">
+	<Header transportSequenceID="%s">
+		<To>
+			<Credential domain="authID">
+				<Identity>%s</Identity>
+			</Credential>
+		</To>
+	</Header>
+	<Request>
+		<StreamUpdateRequest streamID="%s">
+			<StreamReport actionType="update">
+				<BytesReceived>0</BytesReceived>
+				<BytesViewed>0</BytesViewed>
+				<BytesWasted>0</BytesWasted>
+			</StreamReport>
+			<ActivityReports>
+				<ActivityReport sequenceID="%s">
+					<PlayTimeStart>%s</PlayTimeStart>
+					<PlayTimeEnd>%s</PlayTimeEnd>
+					<PlayState>playing</PlayState>
+					<PlayerVolume UOM="percent">0</PlayerVolume>
+				</ActivityReport>
+			</ActivityReports>
+		</StreamUpdateRequest>
+	</Request>
+</StreamMiner>""" % (self.transport_seq_id, self.tm_identity, self.stream_id, seq_id, start_time, end_time)
+        
+        logging.debug(xml)
+        conn = httplib.HTTPConnection('localhost:8888')
+        conn.request("POST", "http://%s%s" % (self.keepalive_domain_name, self.keepalive_relative_url), xml, {'content-type': 'text/xml',
+                                                                'cookie': '_tmid=%s; _tmcm="%s"; _ds=%s' % (self._tmid, 'Z29vZ2xlOjIwMTEwNDI2fHRhcmd1czoyMDExMDQyNg==', self._ds),
+                                                                'referer': 'http://static.inplay.tubemogul.com/core/core-as3-v4.4.0.swf?playerID=%s&bootloaderID=%s' % (self.tm_identity, self.tm_bootloader)})
+        resp = conn.getresponse()
+        response = resp.read()
+        soup = BeautifulStoneSoup(response)
+        status = soup.find("streamupdateresponse")['requeststatus']
+        self.transport_seq_id += 1
+        logging.debug("KEEPALIVE: %s" % (status,))
+    def get_player_setup_xml(self, browser_url):
+        return """<?xml version="1.0" encoding="utf-8"?>
+<StreamMiner version="4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.illumenix.com/StreamReceiver/services/schemas" xsi:schemaLocation="http://www.illumenix.com/StreamReceiver/services/schemas streamminer.xsd">
+    <Header transportSequenceID="0">
+        <To>
+            <Credential domain="authID">
+                <Identity>%s</Identity>
+            </Credential>
+        </To>
+    </Header>
+    <Request>
+        <PlayerSetupRequest bootLoaderID="%s" asversion="AS3">
+            <PlayerReport>
+                <BrowserURL>%s</BrowserURL>
+                <PlayerURL>http://admin.brightcove.com/viewer/us1.25.02.01.2011-03-25142333/federatedSlim/BrightcovePlayer.swf</PlayerURL>
+                <ReferrerURL>not available</ReferrerURL>
+                <OS>Windows XP</OS>
+                <Language>en</Language>
+                <Runtime>Flash</Runtime>
+                <FlashVersion>WIN 10,2,152,27</FlashVersion>
+                <ScreenX>3200</ScreenX>
+                <ScreenY>1080</ScreenY>
+            </PlayerReport>
+            <Trackers>
+                <TrackerID>TR-CWR-QWO</TrackerID>
+                <TrackerID>TR-57Q-1D5</TrackerID>
+            </Trackers>
+        </PlayerSetupRequest>
+    </Request>
+</StreamMiner>""" % (self.tm_identity, self.tm_bootloader, browser_url)
+        
+    
+
     def get_clip_info(self, player_id, video_id):
         conn = httplib.HTTPConnection("c.brightcove.com")
         envelope = self.build_amf_request(player_id, video_id)
@@ -1361,15 +1528,35 @@ class CityTV(BrightcoveBaseChannel):
     long_name = "CityTV"
     default_action = "list_shows"
     cache_timeout = 60*10
+        
     def action_play_episode(self):
         url = "http://video.citytv.com" + self.args['remote_url']
         player_id, video_id = self.find_ids(url)
+        self.video_id = video_id
+        self.player_id = player_id
+        self.do_player_setup(url)
         clipinfo = self.get_clip_info(player_id, video_id)
+        self.publisher_id = clipinfo['publisherId']
+        self.video_length = clipinfo['length']/1000
         parser = URLParser()
-        url = parser(clipinfo['FLVFullLengthURL'])
+        url = clipinfo['FLVFullLengthURL']
+        self.do_stream_setup(url)
+        url = parser(url)
+        logging.debug("STREAM_URL: %s" % (url,))
+        time.sleep(12)
         self.plugin.set_stream_url(url)
-        #logging.debug(clipinfo)
-
+        time.sleep(5)
+        ticks = 1
+        self.stream_update_interval = 7
+        while xbmc.Player().isPlaying():
+            time.sleep(1)
+            ticks += 1
+            if ticks >= self.stream_update_interval:
+                ticks = 0
+                self.do_keepalive()
+                if self.transport_seq_id > 5:
+                    self.stream_update_interval = 23
+        logging.debug("STOPPED!")
     
     def get_series_page(self, remote_url):
         fname = urllib.quote_plus(remote_url)
@@ -1508,7 +1695,7 @@ class CityTV(BrightcoveBaseChannel):
             self.plugin.end_list()
 
         return
-        logging.debug("SECTION DIV: %s" % (section_div,))
+        
 
         monthnames = ["", "January", "February", "March", 
                       "April", "May", "June", "July", "August", 
