@@ -1,4 +1,4 @@
-0.5.3 - attempt to fix broken CTV Bookmarks.
+0.5.3 - Temp fix for broken CTV Bookmarks.
 
 0.5.2 - Lots of CityTV Improvements
 

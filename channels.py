@@ -396,18 +396,6 @@ class CTVBaseChannel(BaseChannel):
             self.args['episode_id'] = eposode_id[0]
             return self.action_browse_episode()
             
-        div = get_soup(rurl).find('div', {'id': re.compile('^Level\d$')})
-        levelclass = [c for c in re.split(r"\s+", div['class']) if c.startswith("Level")][0]
-        levelclass = levelclass[5:]
-        
-        parser = getattr(self, 'parse_level_%s' % (levelclass,))
-        logging.debug("Parse Level %s" % (levelclass,))
-        for item in parser(div):
-            if item.get('playable', False):
-                self.plugin.add_list_item(item, is_folder=False)
-            else:
-                self.plugin.add_list_item(item)
-        self.plugin.end_list()
         
     def action_browse_season(self):
         url = "http://esi.ctv.ca/datafeed/pubsetservice.aspx?sid=" + self.args['season_id']
