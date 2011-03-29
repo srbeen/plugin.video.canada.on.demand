@@ -1404,12 +1404,13 @@ class CMT(BaseChannel):
         
 
 
-class CityTV(BrightcoveBaseChannel):
-    short_name = 'city'
+
+
+class CityTVBaseChannel(BrightcoveBaseChannel):
     status = STATUS_GOOD
-    long_name = "CityTV"
     default_action = "list_shows"
     cache_timeout = 60*10
+    is_abstract = True
     
     def action_play_episode(self):
         url = "http://video.citytv.com" + self.args['remote_url']
@@ -1498,23 +1499,20 @@ class CityTV(BrightcoveBaseChannel):
                 yield data
         
     def parse_clip_list(self, pages):
+        monthnames = ["", "January", "February", "March", 
+                      "April", "May", "June", "July", "August", 
+                      "September", "October", "November", "December"]
+        
         for page in pages:
             page = self.get_series_page(page)
             soup = BeautifulSoup(page)
             
-            div = soup.find('div', {'id': 'episodes'}).div.find('div', {'class': 'episodes'})
+            div = soup.find('div', {'id': 'clips'}).div.find('div', {'class': 'clips'})
             for epdiv in div.findAll('div', {'class': 'item'}):
                 data = {}
                 data.update(self.args)
-                data['Thumb'] = epdiv.find('div', {"class": 'image'}).find('img')['src']
+                data['Thumb'] = epdiv.find('div', {"class": 'image'})['style'][23:-3]
                 data['Title'] = epdiv.find('h1').find('a').contents[0].strip()
-                datestr = epdiv.find('h5').contents[0].strip().replace("Aired on ","")
-                m,d,y = datestr.split(" ")
-                m = "%02d" % (monthnames.index(m),)
-                d = d.strip(" ,")
-                
-                data['Date'] = "%s.%s.%s" % (d,m,y)
-                data['Plot'] = epdiv.find('p').contents[0].strip()
                 data['action'] = 'play_episode'
                 data['remote_url'] = epdiv.find('h1').find('a')['href']
                 yield data
@@ -1571,6 +1569,23 @@ class CityTV(BrightcoveBaseChannel):
 
         
     def action_list_shows(self):
+        soup = get_soup(self.root_url)
+        div = soup.find("div", {'class': 'shows'})
+        for item in div.findAll('div', {'class': 'item'}):
+            a = item.find("h1").a
+            data = {}
+            data.update(self.args)
+            data['action'] = 'browse_show'
+            data['remote_url'] = a['href']
+            data['Title'] = decode_htmlentities(a.contents[0].strip())
+            self.plugin.add_list_item(data)
+        self.plugin.end_list()        
+        
+        
+class CityTV(CityTVBaseChannel):
+    short_name = 'citytv'
+    long_name = "CityTV"
+    def action_list_shows(self):
         url = "http://video.citytv.com/video/json.htm?media=shows&N=0&Nr=AND(Src:Endeca,OR(Src:citytv,Src:cityline))"
         showdata = simplejson.load(get_page(url))
         for show in showdata['shows']:
@@ -1581,3 +1596,20 @@ class CityTV(BrightcoveBaseChannel):
             data['Title'] = decode_htmlentities(show['name'])
             self.plugin.add_list_item(data)
         self.plugin.end_list()
+        
+
+    
+class OLN(CityTVBaseChannel):
+    short_name = 'oln'
+    long_name = 'Outdoor Life Network'
+    root_url = "http://video.citytv.com/video/channel/oln/allmedia/4294965726/"
+    
+class G4TV(CityTVBaseChannel):
+    short_name = 'g4'
+    long_name = "G4 Tech TV"
+    root_url = "http://video.citytv.com/video/channel/g4/allmedia/4294965638/"
+    
+class Omni(CityTVBaseChannel):
+    short_name = 'omni'
+    long_name = 'OMNI TV'
+    root_url = "http://video.citytv.com/video/channel/omni/allmedia/4294965410/"
