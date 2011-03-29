@@ -1492,7 +1492,18 @@ class CityTVBaseChannel(BrightcoveBaseChannel):
                 data = {}
                 data.update(self.args)
                 data['action'] = 'play_episode'
+                data['Plot'] = item.find('p').contents[0].strip()
                 a = item.find('div', {'class': 'meta'}).h1.a
+                try:
+                    date_s = item.find('h5').contents[0].strip().replace("Aired on ","").strip()
+                    m,d,y = date_s.split(" ")
+                    m = monthnames.index(m)
+                    d = d[:-1].strip()
+                    y = y.strip()
+                    data['Date'] = "%s.%s.%s" % (d,m,y)
+                except:
+                    pass
+                
                 data['Title'] = a.contents[0].strip()
                 data['remote_url'] = a['href']
                 data['Thumb'] = item.find('div', {'class': 'image'}).find('img')['src']
