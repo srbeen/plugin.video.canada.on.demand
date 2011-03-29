@@ -1407,7 +1407,7 @@ class CMT(BaseChannel):
 
 
 class CityTVBaseChannel(BrightcoveBaseChannel):
-    status = STATUS_GOOD
+    status = STATUS_BAD
     default_action = "list_shows"
     cache_timeout = 60*10
     is_abstract = True
@@ -1428,7 +1428,8 @@ class CityTVBaseChannel(BrightcoveBaseChannel):
         logging.debug("STREAM_URL: %s" % (url,))
         self.plugin.set_stream_url(url)
         
-    def get_series_page(self, remote_url):
+    def get_cached_page(self, remote_url):
+        logging.debug(remote_url)        
         fname = urllib.quote_plus(remote_url)
         cdir = self.plugin.get_cache_dir()
         cachefilename = os.path.join(cdir, fname)
@@ -1447,13 +1448,20 @@ class CityTVBaseChannel(BrightcoveBaseChannel):
         
         if download:
             data = get_page("http://video.citytv.com" + remote_url).read()
-            fh = open(cachefilename, 'w')
-            simplejson.dump({'cached_at': time.time(), 'html': data}, fh)
-            fh.close()
+            try:
+                fh = open(cachefilename, 'w')
+                simplejson.dump({'cached_at': time.time(), 'html': data}, fh)
+                fh.close()
+            except:
+                # failed to write cache file.
+                # This happens due to a utf-8 decode error that's difficult to 
+                # debug.  some pages won't be cached as a result.
+                pass
+            
         return data
         
     def action_browse_show(self):
-        html = self.get_series_page(self.args['remote_url'])
+        html = self.get_cached_page(self.args['remote_url'])
         soup = BeautifulSoup(html)
         toplevel = self.args.get('toplevel', None)
         section = self.args.get('section', None)
@@ -1485,7 +1493,7 @@ class CityTVBaseChannel(BrightcoveBaseChannel):
                       "September", "October", "November", "December"]
         
         for page in pages:
-            page = self.get_series_page(page)
+            page = self.get_cached_page(page)
             soup = BeautifulSoup(page)
             div = soup.find('div', {'id': 'episodes'}).find('div', {'class': 'episodes'})
             for item in div.findAll('div', {'class': re.compile(r'item.*')}):
@@ -1515,7 +1523,7 @@ class CityTVBaseChannel(BrightcoveBaseChannel):
                       "September", "October", "November", "December"]
         
         for page in pages:
-            page = self.get_series_page(page)
+            page = self.get_cached_page(page)
             soup = BeautifulSoup(page)
             
             div = soup.find('div', {'id': 'clips'}).div.find('div', {'class': 'clips'})
@@ -1528,8 +1536,24 @@ class CityTVBaseChannel(BrightcoveBaseChannel):
                 data['remote_url'] = epdiv.find('h1').find('a')['href']
                 yield data
             
+
+    def parse_show_list(self, pages):
+        for page in pages:
+            page = self.get_cached_page(page)
+            soup = BeautifulSoup(page)
+            div = soup.find("div", {'class': 'shows'})
+            for item in div.findAll('div', {'class': 'item'}):
+                a = item.find("h1").a
+                data = {}
+                data.update(self.args)
+                data['action'] = 'browse_show'
+                data['remote_url'] = a['href']
+                data['Thumb'] = item.find("div", {'class': 'thumb'}).img['src']
+                data['Title'] = decode_htmlentities(a.contents[0].strip())
+                yield data
+        
     def browse_section(self):
-        page = self.get_series_page(self.args['remote_url'])
+        page = self.get_cached_page(self.args['remote_url'])
         soup = BeautifulSoup(page)
         toplevel = self.args.get('toplevel')
         if toplevel == 'Full Episodes':
@@ -1550,7 +1574,7 @@ class CityTVBaseChannel(BrightcoveBaseChannel):
             
     def browse_toplevel(self):
         toplevel = self.args['toplevel']
-        page = self.get_series_page(self.args['remote_url'])
+        page = self.get_cached_page(self.args['remote_url'])
         soup = BeautifulSoup(page)
         if toplevel == 'Full Episodes':
             div = soup.find("div", {'id': 'episodes'})
@@ -1580,35 +1604,24 @@ class CityTVBaseChannel(BrightcoveBaseChannel):
 
         
     def action_list_shows(self):
-        soup = get_soup(self.root_url)
-        div = soup.find("div", {'class': 'shows'})
-        for item in div.findAll('div', {'class': 'item'}):
-            a = item.find("h1").a
-            data = {}
-            data.update(self.args)
-            data['action'] = 'browse_show'
-            data['remote_url'] = a['href']
-            data['Title'] = decode_htmlentities(a.contents[0].strip())
-            self.plugin.add_list_item(data)
-        self.plugin.end_list()        
         
+        page = self.get_cached_page(self.root_url)
+        soup = BeautifulSoup(page)
+        
+        paginator = soup.find('ul', {'class': 'pagination'})
+        pageas = paginator.findAll('a')
+        pages = [self.root_url]
+        pages += [a['href'] for a in pageas]
+        for item in self.parse_show_list(pages):
+            self.plugin.add_list_item(item)
+        self.plugin.end_list()
+
+       
         
 class CityTV(CityTVBaseChannel):
     short_name = 'citytv'
     long_name = "CityTV"
-    def action_list_shows(self):
-        url = "http://video.citytv.com/video/json.htm?media=shows&N=0&Nr=AND(Src:Endeca,OR(Src:citytv,Src:cityline))"
-        showdata = simplejson.load(get_page(url))
-        for show in showdata['shows']:
-            data = {}
-            data.update(self.args)
-            data['action'] = 'browse_show'
-            data['remote_url'] = "/video/" + show['url']
-            data['Title'] = decode_htmlentities(show['name'])
-            self.plugin.add_list_item(data)
-        self.plugin.end_list()
-        
-
+    root_url = "/video/navigation.htm?N=0&type=shows&sort=Display"
     
 class OLN(CityTVBaseChannel):
     short_name = 'oln'
@@ -1618,9 +1631,16 @@ class OLN(CityTVBaseChannel):
 class G4TV(CityTVBaseChannel):
     short_name = 'g4'
     long_name = "G4 Tech TV"
-    root_url = "http://video.citytv.com/video/channel/g4/allmedia/4294965638/"
+    root_url = "/video/channel/g4/allmedia/4294965638/"
     
 class Omni(CityTVBaseChannel):
     short_name = 'omni'
     long_name = 'OMNI TV'
-    root_url = "http://video.citytv.com/video/channel/omni/allmedia/4294965410/"
+    root_url = "/video/channel/omni/allmedia/4294965410/"
+
+class ShortsInTheCity(CityTVBaseChannel):
+    short_name = 'shortsinthecity'
+    long_name = 'Shorts in the City'
+    root_url = '/video/channel/shortsinthecity/allmedia/4294965731/'
+    
+    

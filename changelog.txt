@@ -1,3 +1,5 @@
+0.6.4 - Added Show Images to CityTV Channels and added "Shorts in the City" channel
+
 0.6.3 - Add plot and date to citytv full episodes
 
 0.6.2 - Added OLN, G4 and OMNI
@@ -26,7 +28,6 @@
       - removed the use_rtmp context menu entry, now we just use it
         on the channels that it works for, if your librtmp isnt awesome
 	
-
 0.3.7 - Improved sorting
 
 0.3.6 - added Family.ca [BAD] all streams appear to require type 9 handshake
