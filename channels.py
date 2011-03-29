@@ -1547,10 +1547,14 @@ class CityTV(BrightcoveBaseChannel):
             div = soup.find("div", {'id': 'episodes'})
         elif toplevel == 'Video Clips':
             div = soup.find("div", {'id': 'clips'})
-            
-        section_div = div.find('div', {'class': 'widget'}).find('div', {'class': 'middle'})
-        sections = section_div.findAll('a')
-        if len(sections) == 1:
+        try:
+            section_div = div.find('div', {'class': 'widget'}).find('div', {'class': 'middle'})
+            sections = section_div.findAll('a')
+        except:
+            sections = []
+        if not sections:
+            return self.browse_section()
+        elif len(sections) == 1:
             self.args['section'] = decode_htmlentities(sections[0].contents[0].strip())
             return self.browse_section()
         else:
@@ -1563,30 +1567,8 @@ class CityTV(BrightcoveBaseChannel):
                 self.plugin.add_list_item(data)
             self.plugin.end_list()
 
-        return
         
 
-        monthnames = ["", "January", "February", "March", 
-                      "April", "May", "June", "July", "August", 
-                      "September", "October", "November", "December"]
-        
-        div = soup.find('div', {'id': 'episodes'}).div.find('div', {'class': 'episodes'})
-        for epdiv in div.findAll('div', {'class': 'item'}):
-            data = {}
-            data.update(self.args)
-            data['Thumb'] = epdiv.find('div', {"class": 'image'}).find('img')['src']
-            data['Title'] = epdiv.find('h1').find('a').contents[0].strip()
-            datestr = epdiv.find('h5').contents[0].strip().replace("Aired on ","")
-            m,d,y = datestr.split(" ")
-            m = "%02d" % (monthnames.index(m),)
-            d = d.strip(" ,")
-            
-            data['Date'] = "%s.%s.%s" % (d,m,y)
-            data['Plot'] = epdiv.find('p').contents[0].strip()
-            data['action'] = 'play_episode'
-            data['remote_url'] = epdiv.find('h1').find('a')['href']
-            self.plugin.add_list_item(data, is_folder=False)
-        self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE, xbmcplugin.SORT_METHOD_LABEL])
         
     def action_list_shows(self):
         url = "http://video.citytv.com/video/json.htm?media=shows&N=0&Nr=AND(Src:Endeca,OR(Src:citytv,Src:cityline))"

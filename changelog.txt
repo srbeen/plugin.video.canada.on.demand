@@ -1,3 +1,5 @@
+0.6.1 - Fixed a CityTV Bug which affected a handful of shows.
+
 0.6.0 - Fixed the brightcove backend. CityTV should now work 100%, marked as GOOD
 
 0.5.3 - Temp fix for broken CTV Bookmarks.
