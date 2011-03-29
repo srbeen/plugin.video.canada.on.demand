@@ -21,6 +21,20 @@ class BrightcoveBaseChannel(BaseChannel):
     is_abstract = True
     
 
+    def get_swf_url(self):
+        conn = httplib.HTTPConnection('c.brightcove.com')
+        qsdata = dict(width=640, height=480, flashID=self.flash_experience_id, 
+                      bgcolor="#000000", playerID=self.player_id, publisherID=self.publisher_id,
+                      isSlim='true', wmode='opaque', optimizedContentLoad='true', autoStart='', debuggerID='')
+        qsdata['@videoPlayer'] = self.video_id
+        logging.debug("SWFURL: %s" % (urllib.urlencode(qsdata),))
+        conn.request("GET", "/services/viewer/federated_f9?&" + urllib.urlencode(qsdata))
+        resp = conn.getresponse()
+        location = resp.getheader('location')
+        base = location.split("?",1)[0]
+        location = base.replace("BrightcoveBootloader.swf", "connection/ExternalConnection_2.swf")
+        self.swf_url = location
+        
     def get_clip_info(self, player_id, video_id):
         conn = httplib.HTTPConnection("c.brightcove.com")
         envelope = self.build_amf_request(player_id, video_id)
@@ -69,6 +83,7 @@ class BrightcoveBaseChannel(BaseChannel):
 
     def find_ids(self, url):
         soup = get_soup(url)
+        self.flash_experience_id = soup.find("object")['id']
         try:
             player_id = int(soup.find("object").find("param", {"name": "playerID"})['value'])
         except:
@@ -1391,40 +1406,27 @@ class CMT(BaseChannel):
 
 class CityTV(BrightcoveBaseChannel):
     short_name = 'city'
-    status = STATUS_BAD
+    status = STATUS_GOOD
     long_name = "CityTV"
     default_action = "list_shows"
     cache_timeout = 60*10
-        
+    
     def action_play_episode(self):
         url = "http://video.citytv.com" + self.args['remote_url']
         player_id, video_id = self.find_ids(url)
         self.video_id = video_id
         self.player_id = player_id
-        self.do_player_setup(url)
         clipinfo = self.get_clip_info(player_id, video_id)
+        logging.debug(clipinfo)
         self.publisher_id = clipinfo['publisherId']
         self.video_length = clipinfo['length']/1000
-        parser = URLParser(swf_url="http://static.inplay.tubemogul.com/core/core-as3-v4.4.0.swf?playerID=%s&bootloaderID=%s" %(self.tm_identity, self.tm_bootloader))
+        self.get_swf_url()
+        parser = URLParser(swf_url=self.swf_url, swf_verify=True)
         url = clipinfo['FLVFullLengthURL']
-        self.do_stream_setup(url)
         url = parser(url)
         logging.debug("STREAM_URL: %s" % (url,))
-        time.sleep(12)
         self.plugin.set_stream_url(url)
-        time.sleep(5)
-        ticks = 1
-        self.stream_update_interval = 7
-        while xbmc.Player().isPlaying():
-            time.sleep(1)
-            ticks += 1
-            if ticks >= self.stream_update_interval:
-                ticks = 0
-                self.do_keepalive()
-                if self.transport_seq_id > 5:
-                    self.stream_update_interval = 23
-        logging.debug("STOPPED!")
-    
+        
     def get_series_page(self, remote_url):
         fname = urllib.quote_plus(remote_url)
         cdir = self.plugin.get_cache_dir()
