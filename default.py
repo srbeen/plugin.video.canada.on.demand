@@ -15,8 +15,8 @@ except:
 __plugin__ = "Canada On Demand"
 __author__ = 'Andre,Renaud  {andrepleblanc,renaudtrudel}@gmail.com'
 __url__ = 'http://github.com/andrepl/plugin.video.canada.on.demand/'
-__date__ = '03-29-2011'
-__version__ = '0.6.4'
+__date__ = '04-01-2011'
+__version__ = '0.6.5'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
 
@@ -42,6 +42,7 @@ class OnDemandPlugin(object):
             folder_id integer,
             plugin_url text
         )""")
+
         try:
             curs.execute("""insert into bookmark_folders (id, name, parent_id, path) 
                         values (?,?,?,?)""", (1,'Bookmarks', 0, 'Bookmarks'))
@@ -49,6 +50,9 @@ class OnDemandPlugin(object):
             pass
         
         
+    def fetch(self, url, max_age=None):
+        pass
+    
     def get_url(self,urldata):
         """
         Constructs a URL back into the plugin with the specified arguments.

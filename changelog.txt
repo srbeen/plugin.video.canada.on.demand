@@ -1,3 +1,5 @@
+0.6.5 - Added TVO Kids.
+
 0.6.4 - Added Show Images to CityTV Channels and added "Shorts in the City" channel
 
 0.6.3 - Add plot and date to citytv full episodes

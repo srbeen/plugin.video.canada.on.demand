@@ -1644,3 +1644,101 @@ class ShortsInTheCity(CityTVBaseChannel):
     root_url = '/video/channel/shortsinthecity/allmedia/4294965731/'
     
     
+
+class TVOKids(BrightcoveBaseChannel):
+    short_name = 'tvokids'
+    long_name = 'TVO Kids'
+    default_action = 'root'
+    base_url  = 'http://www.tvokids.com'
+    player_id = 48543011001
+    publisher_id = 15364602001
+    flash_experience_id="null"
+
+    def get_swf_url(self):
+        conn = httplib.HTTPConnection('c.brightcove.com')
+        qsdata = dict(width=640, height=480, flashID=self.flash_experience_id, 
+                      bgcolor="#000000", playerID=self.player_id, publisherID=self.publisher_id,
+                      isSlim='true', wmode='opaque', optimizedContentLoad='true', autoStart='', debuggerID='')
+        qsdata['@videoPlayer'] = self.video_id
+        logging.debug("SWFURL: %s" % (urllib.urlencode(qsdata),))
+        conn.request("GET", "/services/viewer/federated_f9?&" + urllib.urlencode(qsdata))
+        resp = conn.getresponse()
+        location = resp.getheader('location')
+        base = location.split("?",1)[0]
+        location = base.replace("BrightcoveBootloader.swf", "federatedVideo/BrightcovePlayer.swf")
+        self.swf_url = location
+            
+    def action_root(self):
+        data = {}
+        data.update(self.args)
+        data['action'] = 'list_shows'
+        data['age'] = 5
+        data['Title'] = "Ages 2-5"
+        self.plugin.add_list_item(data)
+        data['Title'] = "Ages 11 and under"
+        data['age'] = 11
+        self.plugin.add_list_item(data)
+        self.plugin.end_list()
+        	
+    def action_play_video(self):
+        info = self.get_clip_info(self.player_id, self.args['bc_id'])
+        self.video_id = self.args.get('bc_id')
+        self.get_swf_url()
+        logging.debug(self.swf_url)
+        parser = URLParser(swf_url=self.swf_url, swf_verify=True)
+        url = info['FLVFullLengthURL']
+        app, playpath, wierdqs = url.split("&", 2)
+        qs = "?videoId=%s&lineUpId=&pubId=%s&playerId=%s&affiliateId=" % (self.video_id, self.publisher_id, self.player_id)
+        #playpath += "&" + wierdqs
+        scheme,netloc = app.split("://")
+        
+        netloc, app = netloc.split("/",1)
+        app = app.rstrip("/") + qs
+        logging.debug("APP:%s" %(app,))
+        tcurl = "%s://%s:1935/%s" % (scheme, netloc, app)
+        logging.debug("TCURL:%s" % (tcurl,))
+        #pageurl = 'http://www.tvokids.com/shows/worldofwonders'
+        url = "%s tcUrl=%s app=%s playpath=%s%s swfUrl=%s conn=B:0 conn=S:%s&%s" % (tcurl,tcurl, app, playpath, qs, self.swf_url, playpath, wierdqs)
+        logging.debug(url)
+        self.plugin.set_stream_url(url)
+        
+        
+    def action_browse_show(self):
+        url = self.base_url + "/feeds/%s/all/videos_list.xml?random=%s" % (self.args['node_id'], int(time.time()), )
+        page = get_page(url).read()
+        soup = BeautifulStoneSoup(page)
+        for node in soup.findAll('node'):
+            data = {}
+            logging.debug(node)
+            data.update(self.args)
+            data['action'] = 'play_video'
+            data['Thumb'] = node.find('node_still').contents[0].strip()
+            data['Title'] = decode_htmlentities(node.find('node_title').contents[0].strip())
+            data['Plot'] = decode_htmlentities(node.find("node_short_description").contents[0].strip())
+            data['bc_id'] = node.find("node_bc_id").contents[0].strip()
+            data['bc_refid'] = node.find("node_bc_refid").contents[0].strip()
+            self.plugin.add_list_item(data, is_folder=False)
+        self.plugin.end_list('episodes')
+        
+    def action_list_shows(self):
+        age = int(self.args.get('age'))
+        if age == 11:
+            url = '/feeds/all/98/shows'
+        elif age == 5:
+            url = '/feeds/all/97/shows'
+        page = get_page(self.base_url + url).read()
+        soup = BeautifulStoneSoup(page)
+        for node in soup.findAll('node'):
+            data = {}
+            data.update(self.args)
+            data['Title'] = decode_htmlentities(node.find('node_title').contents[0].strip())
+            thumb = node.find('node_thumbnail').contents[0].strip()
+            if not thumb.endswith(".swf"):
+                data['Thumb'] = self.base_url + "/" + thumb
+            data['node_id'] = node.find('node_id').contents[0].strip()
+            data['action'] = 'browse_show'
+            self.plugin.add_list_item(data)
+        self.plugin.end_list()
+        
+            
+            
