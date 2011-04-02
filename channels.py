@@ -41,9 +41,17 @@ class BrightcoveBaseChannel(BaseChannel):
         conn.request("POST", "/services/amfgateway", str(remoting.encode(envelope).read()), {'content-type': 'application/x-amf'})
         response = conn.getresponse().read()
         response = remoting.decode(response).bodies[0][1].body[0]['data']['videoDTO']
+        logging.debug(response)
         return response
    
-        
+    def choose_rendition(self, renditions):
+        maxrate = int(self.plugin.get_setting("max_bitrate")) * 1024
+        rends = [r for r in renditions if r['encodingRate'] < maxrate]
+        if not rends:
+            rends = renditions
+        rends.sort(key=lambda r: r['encodingRate'])
+        return rends[-1]
+    
     def build_amf_request_body(self, player_id, video_id):
         return [
             player_id,
@@ -1422,7 +1430,7 @@ class CityTVBaseChannel(BrightcoveBaseChannel):
         self.video_length = clipinfo['length']/1000
         self.get_swf_url()
         parser = URLParser(swf_url=self.swf_url, swf_verify=True)
-        url = clipinfo['FLVFullLengthURL']
+        url = self.choose_rendition(clipinfo['renditions'])['defaultURL']
         url = parser(url)
         logging.debug("STREAM_URL: %s" % (url,))
         self.plugin.set_stream_url(url)
@@ -1686,7 +1694,7 @@ class TVOKids(BrightcoveBaseChannel):
         self.get_swf_url()
         logging.debug(self.swf_url)
         parser = URLParser(swf_url=self.swf_url, swf_verify=True)
-        url = info['FLVFullLengthURL']
+        url = self.choose_rendition(info['renditions'])['defaultURL']
         app, playpath, wierdqs = url.split("&", 2)
         qs = "?videoId=%s&lineUpId=&pubId=%s&playerId=%s&affiliateId=" % (self.video_id, self.publisher_id, self.player_id)
         #playpath += "&" + wierdqs
@@ -1846,7 +1854,7 @@ class AUX(BrightcoveBaseChannel):
         self.video_length = clipinfo['length']/1000
         self.get_swf_url()
         parser = URLParser(swf_url=self.swf_url, swf_verify=True)
-        url = clipinfo['FLVFullLengthURL']
+        url = self.choose_rendition(clipinfo['renditions'])['defaultURL']
         app, playpath, wierdqs = url.split("&", 2)
         qs = "?videoId=%s&lineUpId=&pubId=%s&playerId=%s&affiliateId=" % (self.video_id, self.publisher_id, self.player_id)
         #playpath += "&" + wierdqs
@@ -2019,7 +2027,7 @@ class AUX(BrightcoveBaseChannel):
         self.video_length = clipinfo['length']/1000
         self.get_swf_url()
         parser = URLParser(swf_url=self.swf_url, swf_verify=True)
-        url = clipinfo['FLVFullLengthURL']
+        url = self.choose_rendition(clipinfo['renditions'])['defaultURL']
         app, playpath, wierdqs = url.split("&", 2)
         qs = "?videoId=%s&lineUpId=&pubId=%s&playerId=%s&affiliateId=" % (self.video_id, self.publisher_id, self.player_id)
         #playpath += "&" + wierdqs
