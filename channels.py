@@ -475,7 +475,7 @@ class CTVBaseChannel(BaseChannel):
         url = "http://esi.ctv.ca/datafeed/content.aspx?cid=" + self.args['episode_id']
         page = get_page(url).read()
         soup = BeautifulStoneSoup(page)
-        logging.debug(soup)
+        
         plot = soup.find('content').meta.subhead.contents[0].strip()
                              
         for el in soup.find('playlist').findAll('element'):
@@ -1204,7 +1204,7 @@ class Family(BaseChannel):
     
     class FamilyURLParser(URLParser):
         def get_base_url(self):
-            print self.data
+            
             url = "%(scheme)s://%(netloc)s/%(app)s" % self.data
             if self.data['querystring']:
                 url += "?%(querystring)s" % self.data
@@ -1243,7 +1243,6 @@ class Family(BaseChannel):
     def action_root(self):
         
         soup = get_soup(self.base_url + "/video/")
-        logging.debug(soup)
         div = soup.find('div', {'id': 'categoryList'})
         data = {}
         data.update(self.args)
@@ -1646,6 +1645,7 @@ class ShortsInTheCity(CityTVBaseChannel):
     
 
 class TVOKids(BrightcoveBaseChannel):
+    
     short_name = 'tvokids'
     long_name = 'TVO Kids'
     default_action = 'root'
@@ -1742,3 +1742,320 @@ class TVOKids(BrightcoveBaseChannel):
         
             
             
+class TVO(BrightcoveBaseChannel):
+    status = STATUS_BAD
+    short_name = 'tvo'
+    long_name = 'TVO'
+    default_action = 'list_shows'
+    
+    def action_browse_show(self):
+        url = "http://www.tvo.org/TVOspecial4/WebObjects/BRIGHTCOVE.woa?htmlplaylisthomevp_%s" % (self.args.get('show'),)
+        soup = get_soup(url)
+        for item in soup.findAll('div', {'class': 'playlist_title'}):
+            data = {}
+            data.update(self.args)
+            data['Thumb'] = item.find('img')['src']
+            data['Title'] = decode_htmlentities(item.a.contents[0].strip())
+            _date = decode_htmlentities(item.find('span', {'class': 'playlistInfoStats'}).contents[0]).split("|")[0].strip()
+            m,d,y = _date.split("/")
+            data['Date'] = "%s.%s.%s" % (d,m,y)
+            data['Plot'] = decode_htmlentities(item.find('span', {'class': 'playlistShortDescription'}).contents[0].strip())
+            data['action'] = 'play_video'
+            self.plugin.add_list_item(data, is_folder=False)
+        self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_LABEL, xbmcplugin.SORT_METHOD_DATE])
+    
+    def action_list_shows(self):
+        soup = get_soup("http://www.tvo.org/TVO/WebObjects/TVO.woa?video")
+        for a in soup.find("ul", {'id': 'playlistTabs'}).findAll('a'):
+            logging.debug(a)
+            data = {}
+            data.update(self.args)
+            data['action'] = 'browse_show'
+            data['Title'] = decode_htmlentities(a.span.contents[0].strip())
+            onclick = a['onclick'].rsplit("); ")[0][10:]
+            playlist, pid, divid = onclick.split(",")
+            playlist = playlist[1:-1]
+            #divid = divid[1:-1]
+            data['show'] = playlist
+            self.plugin.add_list_item(data)
+        self.plugin.end_list()
+        
+        
+        
+class AUX(BrightcoveBaseChannel):
+    short_name = 'auxtv'
+    long_name = "AUX.TV"
+    status = STATUS_GOOD
+    default_action = 'root'
+    base_url = "http://www.aux.tv"
+    cache_timeout = 60*20
+    
+    
+    def get_cached_page(self, remote_url):
+        fname = 'aux.tv.'+urllib.quote_plus(remote_url)
+        cdir = self.plugin.get_cache_dir()
+        cachefilename = os.path.join(cdir, fname)
+        download = True
+        
+        if os.path.exists(cachefilename):
+            try:
+                data = simplejson.load(open(cachefilename))
+                timestamp = data['cached_at'] 
+                if time.time() - timestamp < self.cache_timeout:
+                    download = False
+                    data = data['html']
+            except:
+                pass
+        
+        if download:
+            data = get_page(self.base_url + remote_url).read()
+            try:
+                fh = open(cachefilename, 'w')
+                simplejson.dump({'cached_at': time.time(), 'html': data}, fh)
+                fh.close()
+            except:
+                # failed to write cache file.
+                # This happens due to a utf-8 decode error that's difficult to 
+                # debug.  some pages won't be cached as a result.
+                pass
+            
+        return data
+
+
+    def get_swf_url(self):
+        conn = httplib.HTTPConnection('c.brightcove.com')
+        qsdata = dict(width=640, height=480, flashID=self.flash_experience_id, 
+                      bgcolor="#000000", playerID=self.player_id, publisherID=self.publisher_id,
+                      isSlim='true', wmode='opaque', optimizedContentLoad='true', autoStart='', debuggerID='')
+        qsdata['@videoPlayer'] = self.video_id
+        
+        conn.request("GET", "/services/viewer/federated_f9?&" + urllib.urlencode(qsdata))
+        resp = conn.getresponse()
+        location = resp.getheader('location')
+        base = location.split("?",1)[0]
+        location = base.replace("BrightcoveBootloader.swf", "BrightcovePlayer.swf")
+        self.swf_url = location
+        
+    def action_play_video(self):
+        url = "http://www.aux.tv" + self.args['remote_url']
+        player_id, video_id = self.find_ids(url)
+        self.video_id = video_id
+        self.player_id = player_id
+        clipinfo = self.get_clip_info(player_id, video_id)
+        self.publisher_id = clipinfo['publisherId']
+        self.video_length = clipinfo['length']/1000
+        self.get_swf_url()
+        parser = URLParser(swf_url=self.swf_url, swf_verify=True)
+        url = clipinfo['FLVFullLengthURL']
+        app, playpath, wierdqs = url.split("&", 2)
+        qs = "?videoId=%s&lineUpId=&pubId=%s&playerId=%s&affiliateId=" % (self.video_id, self.publisher_id, self.player_id)
+        #playpath += "&" + wierdqs
+        scheme,netloc = app.split("://")
+        
+        netloc, app = netloc.split("/",1)
+        app = app.rstrip("/") + qs
+        tcurl = "%s://%s:1935/%s" % (scheme, netloc, app)
+        #pageurl = 'http://www.tvokids.com/shows/worldofwonders'
+        url = "%s tcUrl=%s app=%s playpath=%s%s swfUrl=%s conn=B:0 conn=S:%s&%s" % (tcurl,tcurl, app, playpath, qs, self.swf_url, playpath, wierdqs)
+        logging.debug(url)
+        self.plugin.set_stream_url(url)
+        
+        
+        
+    def action_browse_show(self):
+        rurl = self.args['remote_url']
+        pagelinks = [rurl]
+        soup = BeautifulSoup(self.get_cached_page(rurl))
+        paginator = soup.find("div", {'id': 'videoPaginator'})
+        if paginator:
+            cell = paginator.find('td', {'align': 'center'})
+            pagelinks += [rurl + a['href'] for a in cell.findAll('a')]
+        logging.debug("PageLinks: %s" %(pagelinks,))
+        for data in self.parse_episode_list(pagelinks):
+            self.plugin.add_list_item(data, is_folder=False)
+        self.plugin.end_list()
+    
+    def parse_episode_list(self, pages):
+        for page in pages:
+            page = self.get_cached_page(page)
+            soup = BeautifulSoup(page)            
+            div = soup.find('div', {'id': 'fullVideoList'})
+            for item in div.findAll('div', {'class': 'videoContainerWide'}):
+                data = {}
+                data.update(self.args)
+                data['Thumb'] = item.find('img')['src']
+                data['Title'] = decode_htmlentities(item.find('div', {'class': 'title'}).a.contents[0].strip())
+                data['remote_url'] = item.find('div', {'class': 'title'}).a['href']
+                data['action'] = 'play_video'
+                yield data
+        
+                                                     
+    def action_list_shows(self):
+        page = self.get_cached_page('/shows/')
+        soup = BeautifulSoup(page)
+        #
+        for div in soup.findAll('div', {'id': 'fullVideoList'}):
+            div = div.div
+            imdiv, datadiv = div.findAll("div", recursive=False)[:2]
+            #logging.debug(imdiv, datadiv)
+            data = {}
+            data.update(self.args)
+            data['Thumb'] = imdiv.find('img')['src']
+            data['Title'] = decode_htmlentities(datadiv.find('a').contents[0].strip())
+            data['action'] = 'browse_show'
+            data['remote_url'] = datadiv.find('a')['href']
+            self.plugin.add_list_item(data)
+        self.plugin.end_list()
+        
+    def action_list_artists(self):
+        section = self.args.get('Title')
+        soup = BeautifulSoup(self.get_cached_page('/artists/'))
+        section_divs = soup.findAll("div", {'class': 'pageSection clearfix'})
+        if section == 'Featured Artists':
+            div = section_divs[0]
+        elif section == 'Popular Artists':
+            div = section_divs[1]
+        else:
+            raise ChannelException("Unknown Artist Section")
+        
+        for artist in div.findAll("div", {'class': re.compile(r"peopleBox.*")}):
+            adiv = artist.div.find('div', {'class': 'left'})
+            data = {}
+            data.update(self.args)
+            data['Thumb'] = adiv.find('img')['src']
+            link = adiv.find('div', {'class': 'titleBox'}).find('a')
+            data['Title'] = decode_htmlentities(link.contents[0].strip())
+            data['remote_url'] = link['href']
+            self.plugin.add_list_item(data)
+        self.plugin.end_list()
+            
+
+    def get_all_artists(self):
+        cdir = self.plugin.get_cache_dir()
+        cfile = os.path.join(cdir, 'aux.tv.all.artists')
+        if os.path.exists(cfile):
+            try:
+                fh = open(cfile,'r')
+                data = simplejson.load(fh)
+                fh.close()
+                if time.time() - data['timestamp'] > 60*60*12: # 12h
+                    return data['artists']
+            except:
+                raise
+            
+        urls = ["/artists/"]
+        soup = BeautifulSoup(self.get_cached_page(urls[0]))
+        paginator = soup.find("div", {'id': "artistPaginator"})
+        if paginator:
+            cell = paginator.find("td", {'align': 'center'})
+            for a in cell.findAll('a'):
+                urls.append("/artists/" + a['href'])
+        #logging.debug("PAGEURLS: %s" % (urls,))
+
+        artists = {}
+        for url in urls:
+            soup = BeautifulSoup(self.get_cached_page(url))
+            sec = soup.findAll("div", {'class': "pageSection clearfix"})[2]            
+            for imgdiv in sec.findAll('div', {'class': 'pic'}):
+                item = imgdiv.parent
+                data = {'Title': decode_htmlentities(item.find('div', {'class': 'link'}).a.contents[0].strip()),
+                        'Thumb': item.find('div', {'class': 'pic'}).find('img')['src'],
+                        'remote_url': item.find('div', {'class': 'link'}).a['href']}
+                key = data['Title'][0].upper()
+                if key in "0123456789":
+                    key = "#"
+                if key in artists:
+                    artists[key].append(data)
+                else:
+                    artists[key] = [data]
+                
+                    
+        data = {'timestamp': time.time(), 'artists': artists}
+
+        try:
+            fh = open(cfile, 'w')
+            simplejson.dump(data, fh)
+            fh.close()
+        except:
+            pass
+        return artists
+    
+
+    def action_artists_a_z_browse(self):
+        let = self.args.get('Title')
+        all_artists = self.get_all_artists()
+        for artist in all_artists[let]:
+            data = {}
+            data.update(self.args)
+            data.update(artist)
+            data['action'] = 'browse_artist'
+            self.plugin.add_list_item(data)
+        self.plugin.end_list()
+        
+        
+    def action_browse_artist(self):
+        logging.debug(self.args.get('remote_url'))
+        soup = BeautifulSoup(self.get_cached_page(self.args.get('remote_url')))
+        pane = soup.find("div", {'id': 'homeUserVideosPane'})
+        for item in pane.findAll('div', {'class': 'videoContainerVertical'}):
+            data = {}
+            data.update(self.args)
+            data['action'] = 'play_artist_video'
+            data['Thumb'] = item.find('img')['src']
+            data['Title'] = decode_htmlentities(item.find('div', {'class': 'title'}).find('a').contents[0])
+            data['video_id'] = item.find('div', {'class': 'title'}).find('a')['href'].rsplit(")",1)[0].split("(",1)[1]
+            self.plugin.add_list_item(data, is_folder=False)
+            
+        self.plugin.end_list('episodes')
+        
+    def action_play_artist_video(self):
+        url = "http://www.aux.tv" + self.args['remote_url']
+        player_id, video_id = self.find_ids(url)
+        self.video_id = video_id = self.args.get('video_id')
+        self.player_id = player_id
+        
+        clipinfo = self.get_clip_info(player_id, video_id)
+        self.publisher_id = clipinfo['publisherId']
+        self.video_length = clipinfo['length']/1000
+        self.get_swf_url()
+        parser = URLParser(swf_url=self.swf_url, swf_verify=True)
+        url = clipinfo['FLVFullLengthURL']
+        app, playpath, wierdqs = url.split("&", 2)
+        qs = "?videoId=%s&lineUpId=&pubId=%s&playerId=%s&affiliateId=" % (self.video_id, self.publisher_id, self.player_id)
+        #playpath += "&" + wierdqs
+        scheme,netloc = app.split("://")
+        
+        netloc, app = netloc.split("/",1)
+        app = app.rstrip("/") + qs
+        tcurl = "%s://%s:1935/%s" % (scheme, netloc, app)
+        #pageurl = 'http://www.tvokids.com/shows/worldofwonders'
+        url = "%s tcUrl=%s app=%s playpath=%s%s swfUrl=%s conn=B:0 conn=S:%s&%s" % (tcurl,tcurl, app, playpath, qs, self.swf_url, playpath, wierdqs)
+        logging.debug(url)
+        self.plugin.set_stream_url(url)
+        
+             
+    def action_artists_a_z(self):
+        data = {}
+        data.update(self.args)
+        data['action'] = 'artists_a_z_browse'
+        for c in '#ABCDEFGHIJKLMNOPQRSTUVWXYZ':
+            data['Title'] = c
+            self.plugin.add_list_item(data)
+        self.plugin.end_list()
+        
+                 
+    def action_root(self):
+        root_items = [
+            {'Title': 'Shows', 'action': 'list_shows'},
+            {'Title': 'Featured Artists', 'action': 'list_artists'},
+            {'Title': 'Popular Artists', 'action': 'list_artists'},
+            {'Title': 'All Artists', 'action': 'artists_a_z'}
+        ]
+            
+        for item in root_items:
+            data = dict(self.args)
+            data.update(item)
+            
+            self.plugin.add_list_item(data)
+        self.plugin.end_list()
+        

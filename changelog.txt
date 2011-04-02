@@ -1,3 +1,5 @@
+0.6.6 - Added Aux.TV
+
 0.6.5 - Added TVO Kids.
 
 0.6.4 - Added Show Images to CityTV Channels and added "Shorts in the City" channel
