@@ -14,7 +14,10 @@ try:
 except ImportError:
     has_pyamf = False
     
+
+    
 class BrightcoveBaseChannel(BaseChannel):
+    
     """
     None of this works. All videos stop playing after 1 minute.
     

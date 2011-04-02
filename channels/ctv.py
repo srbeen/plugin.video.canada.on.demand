@@ -1,4 +1,3 @@
-
 from theplatform import *
 
 try:
@@ -7,6 +6,11 @@ try:
 except ImportError:
     has_pyamf = False
     
+try:
+    from sqlite3 import dbapi2 as sqlite
+    
+except:
+    from pysqlite2 import dbapi2 as sqlite
 
 class CTVBaseChannel(BaseChannel):
     status = STATUS_GOOD
@@ -59,7 +63,6 @@ class CTVBaseChannel(BaseChannel):
         page = get_page(url).read()
         soup = BeautifulStoneSoup(page)
         for ep in soup.overdrive.gateway.contents:
-            logging.debug("ASDF: %s" % (ep.contents,))
             if not ep.playlist.contents:
                 continue
             data = {}
@@ -285,13 +288,194 @@ class Space(CTVBaseChannel):
     base_url = "http://watch.spacecast.com/AJAX/"
     swf_url = "http://watch.spacecast.com/Flash/player.swf?themeURL=http://watch.spacecast.com/themes/Space/player/theme.aspx"
 
+
+
+
+
 class MuchMusic(CTVBaseChannel):
     status = STATUS_BAD
     short_name = 'muchmusic'
     long_name = 'Much Music'
     base_url = 'http://watch.muchmusic.com/AJAX/'
     swf_url = 'http://watch.muchmusic.com/Flash/player.swf?themeURL=http://watch.muchmusic.com/themes/MuchMusic/player/theme.aspx'
+    jukebox_db_update_interval = 60*60*24 # 1 day
 
+    def jukebox_db_check(self):
+        dbfile = os.path.join(self.plugin.get_cache_dir(), 'MMJukebox.db')
+        self.jukebox_db_conn = sqlite.connect(dbfile)
+        curs = self.jukebox_db_conn.cursor()
+        curs.execute("""create table if not exists jukebox_meta (
+            key text primary key on conflict replace,
+            value text
+        )""")
+        
+        curs.execute("""create table if not exists artists (
+            id integer primary key on conflict ignore,
+            name text,
+            rank integer null
+            
+        )""")
+        
+        curs.execute("""create table if not exists videos (
+            id integer primary key on conflict ignore,
+            artist_id integer,
+            title text,
+            last_played integer,
+            FOREIGN KEY(artist_id) REFERENCES artists(id)
+        )""")
+        self.jukebox_db_conn.commit()
+        curs.close()
+        curs = self.jukebox_db_conn.cursor()
+        curs.execute("select count(*) from artists;")
+        count = curs.fetchall()[0][0]
+        curs.close()
+        if count == 0:
+            self.jukebox_update_db()
+            
+        curs = self.jukebox_db_conn.cursor()
+        curs.execute("""select key, value from jukebox_meta where key = 'last_updated'""")
+        results = curs.fetchall()
+        curs.close()
+        if len(results) == 0 or time.time() - int(results[0][1]) > self.jukebox_db_update_interval:
+            self.jukebox_update_db()
+            
+            
+    def TEMP_get_cached(self, url):
+        import urllib, urllib2
+        key = url.replace("http://watch.muchmusic.com/AJAX/", "_mm.")
+        key = key.replace("http://esi.ctv.ca/datafeed/", "_esi_df.")
+        root = self.plugin.get_cache_dir()
+        if os.path.exists(os.path.join(root, key)):
+            data = open(os.path.join(root, key)).read()
+        else:
+            data = urllib2.urlopen(url).read()
+            fh = open(os.path.join(root, key), 'w')
+            fh.write(data)
+            fh.close()
+            data
+        return data
+    
+    def jukebox_get_artist_videos(self, artist_id):
+        url="http://esi.ctv.ca/datafeed/content.aspx?cid=%s" % (artist_id,)
+        soup = BeautifulStoneSoup(self.TEMP_get_cached(url))
+        for item in soup.findAll('element'):
+            yield item
+
+            
+    def jukebox_update_db(self):
+        import xbmcgui        
+        progress = xbmcgui.DialogProgress()
+        progress.create("Updating Muchmusic Jukebox DB")
+        soup = BeautifulSoup(self.TEMP_get_cached("http://watch.muchmusic.com/AJAX/VideoLibraryContents.aspx?GetChildOnly=true&PanelID=2&ShowID=1707"))
+        pages = []
+        curs = self.jukebox_db_conn.cursor()
+        tot = float(len(soup.findAll('a')))
+        pct = 0
+        for i, letter in enumerate(soup.findAll("a")):
+            if progress.iscanceled():
+                self.jukebox_db_conn.commit()
+                curs.close()
+                return
+            url = "http://esi.ctv.ca/datafeed/pubsetservice.aspx?sid=" + letter['id']
+            progress.update(pct, "Fetching Artists - %s" % (letter.contents[0].strip(),), "")
+            soup = BeautifulStoneSoup(self.TEMP_get_cached(url))
+            pct = int(((i+1) / tot) * 100)
+
+            for artist in soup.gateway.findAll('content'):
+                artistname = decode_htmlentities(artist.meta.headline.contents[0].strip())
+                curs.execute("""insert into artists (id, name) values (?, ?)""", (artist['id'], artistname))
+                for video in self.jukebox_get_artist_videos(artist['id']):
+                    videoname = decode_htmlentities(video.title.contents[0].strip())
+                    curs.execute("""insert into videos (id, artist_id, title) VALUES (?, ?, ?)""", (video['id'], 
+                                                                                                    artist['id'],
+                                                                                                    videoname
+                                                                                                    )
+                                 )
+                    progress.update(pct, artistname, videoname)
+                    if progress.iscanceled():
+                        self.jukebox_db_conn.commit()
+                        curs.close()
+                        return
+        curs.execute("""insert into jukebox_meta (key, value) VALUES('last_updated',?)""", (int(time.time()),))
+        curs.close()
+        self.jukebox_db_conn.commit()
+        player = JukeboxPlayer()
+        
+
+    
+        
+    def action_jukebox_root(self):
+        self.jukebox_db_check()
+        playlist = xbmc.PlayList(1)
+        playlist.clear()
+        curs = self.jukebox_db_conn.cursor()
+        curs.execute("""select id, title from videos order by random() limit 5""")
+        for row in curs.fetchall():
+            data = {'action': 'play_clip', 'clip_id': row[0], 'jukebox':1, 'Title': row[1], 'channel': "muchmusic"}        
+            li = self.plugin.add_list_item(data, is_folder=False, return_only=True)
+            url = self.plugin.get_url(data)
+            playlist.add(url,li)
+        
+        xbmc.Player(1).play(playlist)
+        self.plugin.end_list()
+        
+        
+
+    def action_play_clip(self):
+        import cgi
+        self.jukebox_db_check()
+        url = self.clipid_to_stream_url(self.args['clip_id'])
+        logging.debug("Playing Stream: %s" % (url,))
+        if self.args.get('jukebox'):
+            playlist = xbmc.PlayList(1)
+            pos = playlist.getposition()
+            logging.debug("CURRENT POS: %s" % (pos,))
+            items = []
+            if pos >= 1:
+                for x in range(pos,len(playlist)):
+                    pli = playlist[x]
+                    data = dict(cgi.parse_qsl(pli.getfilename().split("?",1)[1]))
+                    
+                    _li = self.plugin.add_list_item(data, is_folder=False, return_only=True)
+                    logging.debug(data)
+                    _url = pli.getfilename()
+                    items.append((_url, _li))
+                playlist.clear()
+                for item in items:
+                    playlist.add(item[0], item[1])
+                    
+                logging.debug("ITEMS: %s" % (items,))
+            if len(playlist) < 5:
+                dbfile = os.path.join(self.plugin.get_cache_dir(), 'MMJukebox.db')
+                self.jukebox_db_conn = sqlite.connect(dbfile)                
+                curs = self.jukebox_db_conn.cursor()
+                curs.execute("select id, title from videos order by random() limit 5")
+                for row in curs.fetchall():
+                    data = {'action': 'play_clip', 'clip_id': row[0], 'jukebox':1, 'Title': row[1], 'channel': "muchmusic"}        
+                    li = self.plugin.add_list_item(data, is_folder=False, return_only=True)
+                    url = self.plugin.get_url(data)
+                    playlist.add(url,li)
+
+        self.plugin.set_stream_url(url)
+        
+    def action_root(self):
+        url = self.base_url + self.root_url
+        soup = get_soup(url)
+        ul = soup.find('div', {'id': 'Level1'}).find('ul')
+        data= {}
+        data.update(self.args)
+        data['action'] = 'jukebox_root'
+        data['Title'] = '[Jukebox (experimental)]'
+        data['Thumb'] = self.plugin.get_resource_path('images', 'Wurlitzer.png')
+        self.plugin.add_list_item(data, is_folder=True)
+        for li in ul.findAll('li'):
+            data = {}
+            data.update(self.args)
+            data['Title'] = decode_htmlentities(li.a['title'])
+            data['action'] = 'browse_show'
+            data['show_id'] = li.a['id']
+            self.plugin.add_list_item(data)
+        self.plugin.end_list()
 
 
 class Bravo(CTVBaseChannel):
