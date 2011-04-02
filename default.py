@@ -6,6 +6,7 @@ logging.basicConfig(level=logging.DEBUG)
 import urllib
 from utils import urldecode
 from channels import *
+from channel import *
 try:
     from sqlite3 import dbapi2 as sqlite
     
