@@ -1940,28 +1940,32 @@ class AUX(BrightcoveBaseChannel):
 
     def get_all_artists(self):
         cdir = self.plugin.get_cache_dir()
-        cfile = os.path.join(cdir, 'aux.tv.all.artists')
+        cfile = os.path.join(cdir, 'aux.tv.all.artists.cache')
         if os.path.exists(cfile):
             try:
+                startloadtime = time.time()
                 fh = open(cfile,'r')
                 data = simplejson.load(fh)
                 fh.close()
-                if time.time() - data['timestamp'] > 60*60*12: # 12h
+                if time.time() - data['timestamp'] < 60*60*12: # 12h
+                    logging.debug("SIMPLEJSON TOOK %s SECONDS" % (time.time() - startloadtime,))
                     return data['artists']
             except:
                 raise
-            
+        
+        
         urls = ["/artists/"]
         soup = BeautifulSoup(self.get_cached_page(urls[0]))
         paginator = soup.find("div", {'id': "artistPaginator"})
         if paginator:
             cell = paginator.find("td", {'align': 'center'})
-            for a in cell.findAll('a'):
-                urls.append("/artists/" + a['href'])
-        #logging.debug("PAGEURLS: %s" % (urls,))
+            lastpage = cell.findAll('a')[-1]
+            lastpage = lastpage['href'].split("#",1)[0].split("=",1)[1]
+            urls += ["/artists/?PAGEOFFSET=%s" % (p,) for p in range(1,int(lastpage))]
 
         artists = {}
-        for url in urls:
+        for i, url in enumerate(urls):
+            logging.debug("Fetching Artist Page %s of %s" % (i+1, len(urls)))
             soup = BeautifulSoup(self.get_cached_page(url))
             sec = soup.findAll("div", {'class': "pageSection clearfix"})[2]            
             for imgdiv in sec.findAll('div', {'class': 'pic'}):
@@ -1985,7 +1989,7 @@ class AUX(BrightcoveBaseChannel):
             simplejson.dump(data, fh)
             fh.close()
         except:
-            pass
+            raise
         return artists
     
 
