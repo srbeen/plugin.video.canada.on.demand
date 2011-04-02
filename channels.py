@@ -1953,7 +1953,9 @@ class AUX(BrightcoveBaseChannel):
             except:
                 raise
         
-        
+        import xbmcgui
+        pdiag = xbmcgui.DialogProgress()
+        pdiag.create("Updating Artist Cache")
         urls = ["/artists/"]
         soup = BeautifulSoup(self.get_cached_page(urls[0]))
         paginator = soup.find("div", {'id': "artistPaginator"})
@@ -1965,6 +1967,11 @@ class AUX(BrightcoveBaseChannel):
 
         artists = {}
         for i, url in enumerate(urls):
+            if pdiag.iscanceled():
+                return False
+            pct = ((i+1) / float(len(urls))) * 100
+            logging.debug("PCT:%s" % (pct,))
+            pdiag.update(pct, "Fetching Page %s of %s" % (i+1, len(urls)))
             logging.debug("Fetching Artist Page %s of %s" % (i+1, len(urls)))
             soup = BeautifulSoup(self.get_cached_page(url))
             sec = soup.findAll("div", {'class': "pageSection clearfix"})[2]            
@@ -1981,7 +1988,7 @@ class AUX(BrightcoveBaseChannel):
                 else:
                     artists[key] = [data]
                 
-                    
+        pdiag.close()
         data = {'timestamp': time.time(), 'artists': artists}
 
         try:
