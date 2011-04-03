@@ -1,3 +1,5 @@
+0.7.3 - fixed CityTV Crash
+
 0.7.2 - Fixed Tou.TV Regression, refactored channels further.
 
 0.7.1 - cache duration configurable

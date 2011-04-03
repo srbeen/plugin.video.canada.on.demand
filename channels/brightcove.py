@@ -184,12 +184,6 @@ class CityTVBaseChannel(BrightcoveBaseChannel):
                 except:
                     pass
                 
-                try:
-                    epnum = item.find('div', {'class': 'meta'}).find('div').strong.contents[0].strip()
-                    if epnum.startswith("Episode "):
-                        data['Episode'] = [int(epnum.replace("Episode ",""))]
-                except:
-                    pass
                 
                 data['Title'] = a.contents[0].strip()
                 data['remote_url'] = a['href']
