@@ -1,2 +1,2 @@
 
-__all__ = ['ctv', 'brightcove', 'canwest', 'theplatform']
+__all__ = ['ctv', 'brightcove', 'canwest', 'theplatform', 'misc']
