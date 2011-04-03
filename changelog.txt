@@ -1,3 +1,5 @@
+0.7.1 - cache duration configurable
+
 0.7.0 - Overhaul caching backend
 
 0.6.10 - Added experimental Muchmusic Jukebox feature. 

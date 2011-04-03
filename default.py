@@ -20,7 +20,7 @@ __plugin__ = "Canada On Demand"
 __author__ = 'Andre,Renaud  {andrepleblanc,renaudtrudel}@gmail.com'
 __url__ = 'http://github.com/andrepl/plugin.video.canada.on.demand/'
 __date__ = '04-02-2011'
-__version__ = '0.7.0'
+__version__ = '0.7.1'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
 

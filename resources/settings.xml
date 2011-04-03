@@ -5,6 +5,7 @@
    <setting id="make_playlists" type="bool" label="30004" default="false" />
    <setting id="max_playlist_size" type="number" label="30007" default="6" enable="eq(-1,true)" />
    <setting id="show_empty_cat" type="bool" label="30000" default="false" />
+   <setting id="default_cache_timeout" type="number" label="30008" default="14400" />
    <setting id="http_proxy" type="text" label="30001" default="" />
    <setting id="http_proxy_port" type="text" label="30002" default="" />
 </settings>
