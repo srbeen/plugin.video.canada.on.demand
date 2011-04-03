@@ -57,7 +57,7 @@ class ThePlatformBaseChannel(BaseChannel):
             url = self.get_categories_json(parent_id)
             logging.debug('get_cached_categories(p_id=%s) url=%s'%(parent_id, url))
         
-            categories = self.parse_callback(get_page(url).read())['items']
+            categories = self.parse_callback(self.plugin.fetch(url, self.cache_timeout).read())['items']
             if self.category_cache_timeout > 0:
                 fpath = os.path.join(self.plugin.get_cache_dir(), 'canada.on.demand.%s.categories.cache' % (self.short_name,))
                 fh = open(fpath, 'w')
@@ -111,7 +111,7 @@ class ThePlatformBaseChannel(BaseChannel):
         url = self.get_releases_json(parameter) #has a %s in it--  Canwest:a real cat_id, CBC: the customTags, 
         logging.debug('get_releases url=%s'%url)
         
-        data = self.parse_callback(get_page(url).read())
+        data = self.parse_callback(self.plugin.fetch(url, max_age=self.cache_timeout).read())
         make_playlists = self.plugin.get_setting('make_playlists') == 'true'
         max_bitrate = int(self.plugin.get_setting('max_bitrate'))
         
@@ -191,7 +191,7 @@ class ThePlatformBaseChannel(BaseChannel):
 
     def get_episode_list_data(self, remote_pid):
         url = 'http://release.theplatform.com/content.select?&pid=%s&format=SMIL&mbr=true' % (remote_pid,)
-        soup = get_soup(url)
+        soup = BeautifulStoneSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
         logging.debug("SOUP: %s" % (soup,))
         results = []
 

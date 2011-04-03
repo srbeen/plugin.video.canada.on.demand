@@ -20,7 +20,7 @@ class CTVBaseChannel(BaseChannel):
     
     def action_root(self):
         url = self.base_url + self.root_url
-        soup = get_soup(url)
+        soup = BeautifulSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
         ul = soup.find('div', {'id': 'Level1'}).find('ul')
         for li in ul.findAll('li'):
             data = {}
@@ -60,7 +60,7 @@ class CTVBaseChannel(BaseChannel):
         
     def action_browse_season(self):
         url = "http://esi.ctv.ca/datafeed/pubsetservice.aspx?sid=" + self.args['season_id']
-        page = get_page(url).read()
+        page = self.plugin.fetch(url, max_age=self.cache_timeout).read()
         soup = BeautifulStoneSoup(page)
         for ep in soup.overdrive.gateway.contents:
             if not ep.playlist.contents:
@@ -118,8 +118,7 @@ class CTVBaseChannel(BaseChannel):
 
     def iter_clip_list(self):
         url = "http://esi.ctv.ca/datafeed/content.aspx?cid=" + self.args['episode_id']
-        page = get_page(url).read()
-        soup = BeautifulStoneSoup(page)
+        soup = BeautifulStoneSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
         
         plot = soup.find('content').meta.subhead.contents[0].strip()
                              
@@ -141,7 +140,7 @@ class CTVBaseChannel(BaseChannel):
         
     def action_browse_show(self):
         url = self.base_url + 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=2&ShowID=%s' % (self.args['show_id'],)
-        soup = get_soup(url)
+        soup = BeautifulSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
         div = soup.find('div',{'id': re.compile('^Level\d$')})
         levelclass = [c for c in re.split(r"\s+", div['class']) if c.startswith("Level")][0]
         levelclass = int(levelclass[5:])
@@ -178,7 +177,7 @@ class CTVBaseChannel(BaseChannel):
     def clipid_to_stream_url(self, clipid):
         rurl = "http://esi.ctv.ca/datafeed/urlgenjs.aspx?vid=%s" % (clipid)
         parse = URLParser(swf_url=self.swf_url, force_rtmp=not self.plugin.get_setting("awesome_librtmp") == "true")        
-        url = parse(get_page(rurl).read().strip()[17:].split("'",1)[0])
+        url = parse(self.plugin.fetch(rurl).read().strip()[17:].split("'",1)[0])
         return url
     
     def action_play_clip(self):
@@ -224,7 +223,7 @@ class CTVLocalNews(CTVBaseChannel):
 
         
     def action_browse(self):
-        soup = get_soup("http://%s/" % (self.args['remote_url'],))
+        soup = BeautifulSoup(self.plugin.fetch("http://%s/" % (self.args['remote_url'],), max_age=self.cache_timeout))
         for script in soup.findAll('script'):
             try:
                 txt = script.contents[0].strip()
@@ -301,7 +300,7 @@ class MuchMusic(CTVBaseChannel):
     jukebox_db_update_interval = 60*60*24 # 1 day
 
     def jukebox_db_check(self):
-        dbfile = os.path.join(self.plugin.get_cache_dir(), 'MMJukebox.db')
+        dbfile = os.path.join(xbmc.translatePath('special://profile/addon_data/plugin.video.canada.on.demand/'), 'MMJukebox.db')
         self.jukebox_db_conn = sqlite.connect(dbfile)
         curs = self.jukebox_db_conn.cursor()
         curs.execute("""create table if not exists jukebox_meta (
@@ -330,34 +329,19 @@ class MuchMusic(CTVBaseChannel):
         count = curs.fetchall()[0][0]
         curs.close()
         if count == 0:
-            self.jukebox_update_db()
+            return self.jukebox_update_db()
             
         curs = self.jukebox_db_conn.cursor()
         curs.execute("""select key, value from jukebox_meta where key = 'last_updated'""")
         results = curs.fetchall()
         curs.close()
         if len(results) == 0 or time.time() - int(results[0][1]) > self.jukebox_db_update_interval:
-            self.jukebox_update_db()
+            return self.jukebox_update_db()
             
             
-    def TEMP_get_cached(self, url):
-        import urllib, urllib2
-        key = url.replace("http://watch.muchmusic.com/AJAX/", "_mm.")
-        key = key.replace("http://esi.ctv.ca/datafeed/", "_esi_df.")
-        root = self.plugin.get_cache_dir()
-        if os.path.exists(os.path.join(root, key)):
-            data = open(os.path.join(root, key)).read()
-        else:
-            data = urllib2.urlopen(url).read()
-            fh = open(os.path.join(root, key), 'w')
-            fh.write(data)
-            fh.close()
-            data
-        return data
-    
     def jukebox_get_artist_videos(self, artist_id):
         url="http://esi.ctv.ca/datafeed/content.aspx?cid=%s" % (artist_id,)
-        soup = BeautifulStoneSoup(self.TEMP_get_cached(url))
+        soup = BeautifulStoneSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
         for item in soup.findAll('element'):
             yield item
 
@@ -366,7 +350,7 @@ class MuchMusic(CTVBaseChannel):
         import xbmcgui        
         progress = xbmcgui.DialogProgress()
         progress.create("Updating Muchmusic Jukebox DB")
-        soup = BeautifulSoup(self.TEMP_get_cached("http://watch.muchmusic.com/AJAX/VideoLibraryContents.aspx?GetChildOnly=true&PanelID=2&ShowID=1707"))
+        soup = BeautifulSoup(self.plugin.fetch("http://watch.muchmusic.com/AJAX/VideoLibraryContents.aspx?GetChildOnly=true&PanelID=2&ShowID=1707", max_age=self.cache_timeout))
         pages = []
         curs = self.jukebox_db_conn.cursor()
         tot = float(len(soup.findAll('a')))
@@ -378,7 +362,7 @@ class MuchMusic(CTVBaseChannel):
                 return
             url = "http://esi.ctv.ca/datafeed/pubsetservice.aspx?sid=" + letter['id']
             progress.update(pct, "Fetching Artists - %s" % (letter.contents[0].strip(),), "")
-            soup = BeautifulStoneSoup(self.TEMP_get_cached(url))
+            soup = BeautifulStoneSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
             pct = int(((i+1) / tot) * 100)
 
             for artist in soup.gateway.findAll('content'):
@@ -446,7 +430,7 @@ class MuchMusic(CTVBaseChannel):
                     
                 logging.debug("ITEMS: %s" % (items,))
             if len(playlist) < 5:
-                dbfile = os.path.join(self.plugin.get_cache_dir(), 'MMJukebox.db')
+                dbfile = os.path.join(xbmc.translatePath('special://profile/addon_data/plugin.video.canada.on.demand/'), 'MMJukebox.db')
                 self.jukebox_db_conn = sqlite.connect(dbfile)                
                 curs = self.jukebox_db_conn.cursor()
                 curs.execute("select id, title from videos order by random() limit 5")
@@ -460,7 +444,7 @@ class MuchMusic(CTVBaseChannel):
         
     def action_root(self):
         url = self.base_url + self.root_url
-        soup = get_soup(url)
+        soup = BeautifulSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
         ul = soup.find('div', {'id': 'Level1'}).find('ul')
         data= {}
         data.update(self.args)

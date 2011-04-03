@@ -61,6 +61,7 @@ class BaseChannel(object):
 
     
     """
+    cache_timeout = 60*60
     short_name = None
     long_name = None
     icon_path = None

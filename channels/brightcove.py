@@ -94,7 +94,7 @@ class BrightcoveBaseChannel(BaseChannel):
 
 
     def find_ids(self, url):
-        soup = get_soup(url)
+        soup = BeautifulSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
         self.flash_experience_id = soup.find("object")['id']
         try:
             player_id = int(soup.find("object").find("param", {"name": "playerID"})['value'])
@@ -120,10 +120,10 @@ class CPAC(BaseChannel):
     
     def action_play_video(self):
         remote_url = self.base_url + self.args['remote_url']
-        soup = get_soup(remote_url)
+        soup = BeautifulSoup(self.plugin.fetch(remote_url, max_age=self.cache_timeout))
         obj = soup.find("object", {'id': "MPlayer2"})
         vidurl = obj.find('param', {'name': 'url'})['value']
-        asx = get_soup(vidurl)
+        asx = BeautifulSoup(self.plugin.fetch(vidurl, max_age=self.cache_timeout))
         entries = asx.findAll('entry')
         if len(entries) > 1:
             entries = entries[1:]
@@ -136,7 +136,7 @@ class CPAC(BaseChannel):
         return self.plugin.set_stream_url(url)
         
     def action_list_episodes(self):
-        soup = get_soup(self.base_url + self.args['remote_url'])
+        soup = BeautifulSoup(self.plugin.fetch(self.base_url + self.args['remote_url'], max_age=self.cache_timeout))
         for li in soup.find('div', {'id': 'video_scroll'}).findAll('div', {'class': 'list_item'}):
             links = li.findAll('a')
             ep_title = links[0].contents[0]
@@ -153,7 +153,7 @@ class CPAC(BaseChannel):
         self.plugin.end_list()
 
     def action_list_shows(self):
-        soup = get_soup(self.base_url)
+        soup = BeautifulSoup(self.plugin.fetch(self.base_url, max_age=self.cache_timeout))
         select = soup.find('select', {"name": 'proglinks'})
         for show in select.findAll('option')[1:]:
             data = {}
@@ -166,7 +166,7 @@ class CPAC(BaseChannel):
         
     def action_latest_videos(self):
         url = self.base_url + "index.asp?dsp=template&act=view3&section_id=860&template_id=860&hl=e"
-        soup = get_soup(url)
+        soup = BeautifulSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
         for li in soup.find('div', {'id': 'video_scroll'}).findAll('div', {'class': 'list_item'}):
             links = li.findAll('a')
             ep_title = links[0].contents[0]
@@ -216,7 +216,7 @@ class Family(BaseChannel):
             params.append(('pageUrl', 'http://www.family.ca/video/#video=%s' % (726,)))
             return params
     def action_play_video(self):
-        qs = urldecode(get_page(self.base_url + "/video/scripts/loadToken.php").read().strip()[1:])['uri']
+        qs = urldecode(self.plugin.fetch(self.base_url + "/video/scripts/loadToken.php").read().strip()[1:])['uri']
         filename = self.args['filename']
         url = "rtmpe://cp107996.edgefcs.net/ondemand/videos/family/%s?%s" % (filename, qs)
         parser = Family.FamilyURLParser(swf_url="http://www.family.ca/video/player.swf", playpath_qs=False)
@@ -224,7 +224,7 @@ class Family(BaseChannel):
         self.plugin.set_stream_url(url)
         
     def action_browse_category(self):
-        results = simplejson.load(get_page(self.base_url + "/video/scripts/loadGroupVideos.php?groupID=%s" % (self.args['id'],)))
+        results = simplejson.load(self.plugin.fetch(self.base_url + "/video/scripts/loadGroupVideos.php?groupID=%s" % (self.args['id'],), max_age=self.cache_timeout))
         for vid in results['videosbygroup']:
             data = {}
             data.update(self.args)
@@ -243,7 +243,7 @@ class Family(BaseChannel):
         
     def action_root(self):
         
-        soup = get_soup(self.base_url + "/video/")
+        soup = BeautifulSoup(self.plugin.fetch(self.base_url + "/video/", max_age=self.cache_timeout))
         div = soup.find('div', {'id': 'categoryList'})
         data = {}
         data.update(self.args)
@@ -264,34 +264,11 @@ class CMT(BaseChannel):
     default_action = 'root'
     short_name = 'cmt'
     long_name = 'Country Music Television'
-    cache_timeout = 60*15 #seconds
-    
-    def get_cached_page(self):
-        cachedir = self.plugin.get_cache_dir()
-        cachefilename = os.path.join(cachedir, 'cmt.cache')
-        download = True
-        if os.path.exists(cachefilename):
-            try:
-                data = simplejson.load(open(cachefilename))
-                timestamp = data['cached_at'] 
-                if time.time() - timestamp < self.cache_timeout:
-                    download = False
-                    data = data['html']
-            except:
-                pass
-        
-        if download:
-            data = get_page("http://www.cmt.ca/musicvideos/").read()
-            fh = open(cachefilename, 'w')
-            simplejson.dump({'cached_at': time.time(), 'html': data}, fh)
-            fh.close()
-            
-        return data
                     
 
     def action_play_video(self):
         url = "http://video.music.yahoo.com/up/fop/process/getPlaylistFOP.php?node_id=v" + self.args.get('video_id')
-        page = get_page(url).read()
+        page = self.plugin.fetch(url).read()
         soup = BeautifulStoneSoup(page)
         tag = soup.find('stream')
         url = tag['app']
@@ -301,19 +278,19 @@ class CMT(BaseChannel):
         return self.plugin.set_stream_url(url)
         
     def action_newest(self):
-        soup = BeautifulSoup(self.get_cached_page())
+        soup = BeautifulSoup(self.plugin.fetch("http://www.cmt.ca/musicvideos/",max_age=self.cache_timeout))
         div = soup.find("div", {'id': 'Newest'})
         self.list_videos(div)
     
         
     def action_browse_genre(self):
         url = "http://www.cmt.ca/musicvideos/Category.aspx?id=%s" % (self.args['genre'],)
-        soup = get_soup(url)
+        soup = BeautifulSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
         div = soup.find("div", {'class': 'yahooCategory'})
         self.list_videos(div)
         
     def action_genres(self):
-        soup = BeautifulSoup(self.get_cached_page())
+        soup = BeautifulSoup(self.plugin.fetch("http://www.cmt.ca/musicvideos/",max_age=self.cache_timeout))
         div = soup.find("div", {'id': 'Genre'})
         for tr in div.findAll('tr'):
             data = {}
@@ -347,8 +324,8 @@ class CMT(BaseChannel):
         self.plugin.end_list()
         
     def action_search(self):
-        page = self.get_cached_page()
-        soup = BeautifulSoup(page)
+        soup = BeautifulSoup(self.plugin.fetch("http://www.cmt.ca/musicvideos/",max_age=self.cache_timeout))
+        
         viewstate = soup.find('input', {'id': '__VIEWSTATE'})['value']
         logging.debug("VIEWSTATE: %s" % (viewstate,))
         search_string = self.plugin.get_modal_keyboard_input("", "Enter a Full or Partial Artist Name")
@@ -375,7 +352,7 @@ class CMT(BaseChannel):
         self.list_videos(div)
         
     def action_most_popular(self):
-        soup = BeautifulSoup(self.get_cached_page())
+        soup = BeautifulSoup(self.plugin.fetch("http://www.cmt.ca/musicvideos/",max_age=self.cache_timeout))
         div = soup.find("div", {'id': 'Popular'})
         self.list_videos(div)
         
@@ -409,7 +386,7 @@ class CMT(BaseChannel):
 class CityTVBaseChannel(BrightcoveBaseChannel):
     status = STATUS_BAD
     default_action = "list_shows"
-    cache_timeout = 60*10
+    base_url = "http://video.citytv.com"
     is_abstract = True
     
     def action_play_episode(self):
@@ -427,41 +404,10 @@ class CityTVBaseChannel(BrightcoveBaseChannel):
         url = parser(url)
         logging.debug("STREAM_URL: %s" % (url,))
         self.plugin.set_stream_url(url)
-        
-    def get_cached_page(self, remote_url):
-        logging.debug(remote_url)        
-        fname = urllib.quote_plus(remote_url)
-        cdir = self.plugin.get_cache_dir()
-        cachefilename = os.path.join(cdir, fname)
-        download = True
-        
-        if os.path.exists(cachefilename):
-            try:
-                data = simplejson.load(open(cachefilename))
-                timestamp = data['cached_at'] 
-                if time.time() - timestamp < self.cache_timeout:
-                    download = False
-                    logging.debug("Using Cached Copy of: %s" % (remote_url,))
-                    data = data['html']
-            except:
-                pass
-        
-        if download:
-            data = get_page("http://video.citytv.com" + remote_url).read()
-            try:
-                fh = open(cachefilename, 'w')
-                simplejson.dump({'cached_at': time.time(), 'html': data}, fh)
-                fh.close()
-            except:
-                # failed to write cache file.
-                # This happens due to a utf-8 decode error that's difficult to 
-                # debug.  some pages won't be cached as a result.
-                pass
-            
-        return data
+
         
     def action_browse_show(self):
-        html = self.get_cached_page(self.args['remote_url'])
+        html = self.plugin.fetch(self.base_url + self.args['remote_url'], max_age=self.cache_timeout)
         soup = BeautifulSoup(html)
         toplevel = self.args.get('toplevel', None)
         section = self.args.get('section', None)
@@ -493,7 +439,7 @@ class CityTVBaseChannel(BrightcoveBaseChannel):
                       "September", "October", "November", "December"]
         
         for page in pages:
-            page = self.get_cached_page(page)
+            page = self.plugin.fetch(self.base_url + page, max_age=self.cache_timeout)
             soup = BeautifulSoup(page)
             div = soup.find('div', {'id': 'episodes'}).find('div', {'class': 'episodes'})
             for item in div.findAll('div', {'class': re.compile(r'item.*')}):
@@ -523,7 +469,7 @@ class CityTVBaseChannel(BrightcoveBaseChannel):
                       "September", "October", "November", "December"]
         
         for page in pages:
-            page = self.get_cached_page(page)
+            page = self.plugin.fetch(self.base_url + page, max_age=self.cache_timeout)
             soup = BeautifulSoup(page)
             
             div = soup.find('div', {'id': 'clips'}).div.find('div', {'class': 'clips'})
@@ -539,7 +485,7 @@ class CityTVBaseChannel(BrightcoveBaseChannel):
 
     def parse_show_list(self, pages):
         for page in pages:
-            page = self.get_cached_page(page)
+            page = self.plugin.fetch(self.base_url + page, max_age=self.cache_timeout)
             soup = BeautifulSoup(page)
             div = soup.find("div", {'class': 'shows'})
             for item in div.findAll('div', {'class': 'item'}):
@@ -553,7 +499,7 @@ class CityTVBaseChannel(BrightcoveBaseChannel):
                 yield data
         
     def browse_section(self):
-        page = self.get_cached_page(self.args['remote_url'])
+        page = self.plugin.fetch(self.base_url + self.args['remote_url'], max_age=self.cache_timeout)
         soup = BeautifulSoup(page)
         toplevel = self.args.get('toplevel')
         if toplevel == 'Full Episodes':
@@ -574,7 +520,7 @@ class CityTVBaseChannel(BrightcoveBaseChannel):
             
     def browse_toplevel(self):
         toplevel = self.args['toplevel']
-        page = self.get_cached_page(self.args['remote_url'])
+        page = self.plugin.fetch(self.base_url+self.args['remote_url'], max_age=self.cache_timeout)
         soup = BeautifulSoup(page)
         if toplevel == 'Full Episodes':
             div = soup.find("div", {'id': 'episodes'})
@@ -605,7 +551,7 @@ class CityTVBaseChannel(BrightcoveBaseChannel):
         
     def action_list_shows(self):
         
-        page = self.get_cached_page(self.root_url)
+        page = self.plugin.fetch(self.base_url + self.root_url, max_age=self.cache_timeout)
         soup = BeautifulSoup(page)
         
         paginator = soup.find('ul', {'class': 'pagination'})
@@ -706,7 +652,7 @@ class TVOKids(BrightcoveBaseChannel):
         
     def action_browse_show(self):
         url = self.base_url + "/feeds/%s/all/videos_list.xml?random=%s" % (self.args['node_id'], int(time.time()), )
-        page = get_page(url).read()
+        page = self.plugin.fetch(url, max_age=self.cache_timeout).read()
         soup = BeautifulStoneSoup(page)
         for node in soup.findAll('node'):
             data = {}
@@ -727,7 +673,7 @@ class TVOKids(BrightcoveBaseChannel):
             url = '/feeds/all/98/shows'
         elif age == 5:
             url = '/feeds/all/97/shows'
-        page = get_page(self.base_url + url).read()
+        page = self.plugin.fetch(self.base_url + url, max_age=self.cache_timeout).read()
         soup = BeautifulStoneSoup(page)
         for node in soup.findAll('node'):
             data = {}
@@ -751,7 +697,7 @@ class TVO(BrightcoveBaseChannel):
     
     def action_browse_show(self):
         url = "http://www.tvo.org/TVOspecial4/WebObjects/BRIGHTCOVE.woa?htmlplaylisthomevp_%s" % (self.args.get('show'),)
-        soup = get_soup(url)
+        soup = BeautifulSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
         for item in soup.findAll('div', {'class': 'playlist_title'}):
             data = {}
             data.update(self.args)
@@ -766,7 +712,7 @@ class TVO(BrightcoveBaseChannel):
         self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_LABEL, xbmcplugin.SORT_METHOD_DATE])
     
     def action_list_shows(self):
-        soup = get_soup("http://www.tvo.org/TVO/WebObjects/TVO.woa?video")
+        soup = BeautifulSoup(self.plugin.fetch("http://www.tvo.org/TVO/WebObjects/TVO.woa?video", max_age=self.cache_timeout))
         for a in soup.find("ul", {'id': 'playlistTabs'}).findAll('a'):
             logging.debug(a)
             data = {}
@@ -792,35 +738,6 @@ class AUX(BrightcoveBaseChannel):
     cache_timeout = 60*20
     
     
-    def get_cached_page(self, remote_url):
-        fname = 'aux.tv.'+urllib.quote_plus(remote_url)
-        cdir = self.plugin.get_cache_dir()
-        cachefilename = os.path.join(cdir, fname)
-        download = True
-        
-        if os.path.exists(cachefilename):
-            try:
-                data = simplejson.load(open(cachefilename))
-                timestamp = data['cached_at'] 
-                if time.time() - timestamp < self.cache_timeout:
-                    download = False
-                    data = data['html']
-            except:
-                pass
-        
-        if download:
-            data = get_page(self.base_url + remote_url).read()
-            try:
-                fh = open(cachefilename, 'w')
-                simplejson.dump({'cached_at': time.time(), 'html': data}, fh)
-                fh.close()
-            except:
-                # failed to write cache file.
-                # This happens due to a utf-8 decode error that's difficult to 
-                # debug.  some pages won't be cached as a result.
-                pass
-            
-        return data
 
 
     def get_swf_url(self):
@@ -866,7 +783,7 @@ class AUX(BrightcoveBaseChannel):
     def action_browse_show(self):
         rurl = self.args['remote_url']
         pagelinks = [rurl]
-        soup = BeautifulSoup(self.get_cached_page(rurl))
+        soup = BeautifulSoup(self.plugin.fetch(self.base_url + rurl, max_age=self.cache_timeout))
         paginator = soup.find("div", {'id': 'videoPaginator'})
         if paginator:
             cell = paginator.find('td', {'align': 'center'})
@@ -878,7 +795,7 @@ class AUX(BrightcoveBaseChannel):
     
     def parse_episode_list(self, pages):
         for page in pages:
-            page = self.get_cached_page(page)
+            page = self.plugin.fetch(self.base_url + page, max_age=self.cache_timeout)
             soup = BeautifulSoup(page)            
             div = soup.find('div', {'id': 'fullVideoList'})
             for item in div.findAll('div', {'class': 'videoContainerWide'}):
@@ -892,7 +809,7 @@ class AUX(BrightcoveBaseChannel):
         
                                                      
     def action_list_shows(self):
-        page = self.get_cached_page('/shows/')
+        page = self.plugin.fetch(self.base_url + '/shows/', max_age=self.cache_timeout)
         soup = BeautifulSoup(page)
         #
         for div in soup.findAll('div', {'id': 'fullVideoList'}):
@@ -910,7 +827,7 @@ class AUX(BrightcoveBaseChannel):
         
     def action_list_artists(self):
         section = self.args.get('Title')
-        soup = BeautifulSoup(self.get_cached_page('/artists/'))
+        soup = BeautifulSoup(self.plugin.fetch(self.base_url + '/artists/', max_age=self.cache_timeout))
         section_divs = soup.findAll("div", {'class': 'pageSection clearfix'})
         if section == 'Featured Artists':
             div = section_divs[0]
@@ -950,7 +867,7 @@ class AUX(BrightcoveBaseChannel):
         pdiag = xbmcgui.DialogProgress()
         pdiag.create("Updating Artist Cache")
         urls = ["/artists/"]
-        soup = BeautifulSoup(self.get_cached_page(urls[0]))
+        soup = BeautifulSoup(self.plugin.fetch(self.base_url + urls[0], max_age=self.cache_timeout))
         paginator = soup.find("div", {'id': "artistPaginator"})
         if paginator:
             cell = paginator.find("td", {'align': 'center'})
@@ -966,7 +883,7 @@ class AUX(BrightcoveBaseChannel):
             logging.debug("PCT:%s" % (pct,))
             pdiag.update(pct, "Fetching Page %s of %s" % (i+1, len(urls)))
             logging.debug("Fetching Artist Page %s of %s" % (i+1, len(urls)))
-            soup = BeautifulSoup(self.get_cached_page(url))
+            soup = BeautifulSoup(self.plugin.fetch(self.base_url + url, max_age=self.cache_timeout))
             sec = soup.findAll("div", {'class': "pageSection clearfix"})[2]            
             for imgdiv in sec.findAll('div', {'class': 'pic'}):
                 item = imgdiv.parent
@@ -1007,7 +924,7 @@ class AUX(BrightcoveBaseChannel):
         
     def action_browse_artist(self):
         logging.debug(self.args.get('remote_url'))
-        soup = BeautifulSoup(self.get_cached_page(self.args.get('remote_url')))
+        soup = BeautifulSoup(self.plugin.fetch(self.base_url + self.args.get('remote_url'), max_age=self.cache_timeout))
         pane = soup.find("div", {'id': 'homeUserVideosPane'})
         for item in pane.findAll('div', {'class': 'videoContainerVertical'}):
             data = {}

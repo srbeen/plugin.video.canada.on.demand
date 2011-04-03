@@ -283,16 +283,7 @@ def get_page(url, retry_limit=4):
     fetch a url, damnit.
     
     """
-
-    retries = 0
-
-    while retries < retry_limit:
-        logging.debug("fetching %s" % (url,))
-        try:            
-            return urllib2.urlopen(url)
-        except (urllib2.HTTPError, urllib2.URLError), e:
-            retries += 1
-    raise CTVException("Failed to retrieve page: %s" %(url,))
+    raise Exception("DEPRECATED get_page call to %s" %(url,))
 
 
 def get_soup(url, *args, **kwargs):
