@@ -354,7 +354,7 @@ class TVOKids(BrightcoveBaseChannel):
         data['age'] = 11
         self.plugin.add_list_item(data)
         self.plugin.end_list()
-        	
+            
     def action_play_video(self):
         info = self.get_clip_info(self.player_id, self.args['bc_id'])
         self.video_id = self.args.get('bc_id')
@@ -715,4 +715,42 @@ class AUX(BrightcoveBaseChannel):
             
             self.plugin.add_list_item(data)
         self.plugin.end_list()
+        
+        
+        
+        
+class CanalVie(BrightcoveBaseChannel):
+    status = STATUS_BAD
+    short_name = 'canalvie'
+    long_name = 'Canal Vie'
+    default_action = 'list_shows'
+    
+    def action_browse_show(self):
+        url = "http://www.tvo.org/TVOspecial4/WebObjects/BRIGHTCOVE.woa?htmlplaylisthomevp_%s" % (self.args.get('show'),)
+        soup = BeautifulSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
+        for item in soup.findAll('div', {'class': 'playlist_title'}):
+            data = {}
+            data.update(self.args)
+            data['Thumb'] = item.find('img')['src']
+            data['Title'] = decode_htmlentities(item.a.contents[0].strip())
+            _date = decode_htmlentities(item.find('span', {'class': 'playlistInfoStats'}).contents[0]).split("|")[0].strip()
+            m,d,y = _date.split("/")
+            data['Date'] = "%s.%s.%s" % (d,m,y)
+            data['Plot'] = decode_htmlentities(item.find('span', {'class': 'playlistShortDescription'}).contents[0].strip())
+            data['action'] = 'play_video'
+            self.plugin.add_list_item(data, is_folder=False)
+        self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_LABEL, xbmcplugin.SORT_METHOD_DATE])
+    
+    def action_list_shows(self):
+        soup = BeautifulSoup(self.plugin.fetch("http://www.canalvie.com/webtele/", max_age=self.cache_timeout))
+        for a in soup.find("select", {'id': 'programId'}).findAll('option'):
+            logging.debug(a)
+            data = {}
+            data.update(self.args)
+            data['action'] = 'browse_show'
+            data['Title'] = decode_htmlentities(a.contents[0].strip())
+            data['show'] = a.attributes['value']
+            self.plugin.add_list_item(data)
+        self.plugin.end_list()
+        
         
