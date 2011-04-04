@@ -1,11 +1,15 @@
 import os, sys
+import shutil
+import sha
 import cgi
 import xbmc, xbmcaddon, xbmcgui, xbmcplugin
 import logging
 logging.basicConfig(level=logging.DEBUG)
-import urllib
+import urllib,urllib2
+import time
 from utils import urldecode
 from channels import *
+from channel import *
 try:
     from sqlite3 import dbapi2 as sqlite
     
@@ -15,8 +19,8 @@ except:
 __plugin__ = "Canada On Demand"
 __author__ = 'Andre,Renaud  {andrepleblanc,renaudtrudel}@gmail.com'
 __url__ = 'http://github.com/andrepl/plugin.video.canada.on.demand/'
-__date__ = '03-29-2011'
-__version__ = '0.6.4'
+__date__ = '04-03-2011'
+__version__ = '0.7.3'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
 
@@ -42,13 +46,66 @@ class OnDemandPlugin(object):
             folder_id integer,
             plugin_url text
         )""")
+
         try:
             curs.execute("""insert into bookmark_folders (id, name, parent_id, path) 
                         values (?,?,?,?)""", (1,'Bookmarks', 0, 'Bookmarks'))
         except:
             pass
         
+
+    def _urlopen(self, url, retry_limit=4):
+        retries = 0
+        while retries < retry_limit:
+            logging.debug("fetching %s" % (url,))
+            try:            
+                return urllib2.urlopen(url)
+            except (urllib2.HTTPError, urllib2.URLError), e:
+                retries += 1
+            raise Exception("Failed to retrieve page: %s" %(url,))
+    
+    def _urlretrieve(self, url, filename, retry_limit=4):
+        retries = 0
+        while retries < retry_limit:
+            logging.debug("fetching %s" % (url,))
+            try:            
+                return urllib.urlretrieve(url, filename)
+            except (urllib.HTTPError, urllib.URLError), e:
+                retries += 1
+            raise Exception("Failed to retrieve page: %s" %(url,))
         
+    def fetch(self, url, max_age=None):
+        if max_age is None:
+            return self._urlopen(url)
+
+        tmpurl = url
+        scheme, tmpurl = tmpurl.split("://",1)
+        netloc, path = tmpurl.split("/",1)
+        fname = sha.new(path).hexdigest()
+        _dir = fname[:4]
+        cacheroot = self.get_cache_dir()
+        cachepath = os.path.join(cacheroot, netloc, _dir)
+        if not os.path.exists(cachepath):
+            os.makedirs(cachepath)
+
+        download = True
+        cfname = os.path.join(cachepath, fname)
+        if os.path.exists(cfname):
+            ctime = os.path.getctime(cfname)
+            logging.debug("FILE_CTIME: %s" % (ctime,))
+            if time.time() - ctime < max_age:
+                download = False
+                
+        if download:
+            logging.debug("Fetching: %s" % (url,))
+            urllib.urlretrieve(url, cfname)
+        else:
+            logging.debug("Using Cached: %s" % (url,))
+            
+        return open(cfname)
+        
+        
+    
     def get_url(self,urldata):
         """
         Constructs a URL back into the plugin with the specified arguments.
@@ -186,6 +243,7 @@ class OnDemandPlugin(object):
         if not is_folder:
             li.setProperty("IsPlayable", "true") 
             context_menu_items.append(("Queue Item", "Action(Queue)"))
+        
         li.setInfo(type='Video', infoLabels=dict((k, unicode(v)) for k, v in info.iteritems()))
         
         # Add Context Menu Items
@@ -404,6 +462,15 @@ class OnDemandPlugin(object):
         
         return chan()
     
+    def check_cache(self):
+        cachedir = self.get_cache_dir()
+        version_file = os.path.join(cachedir, 'version.0.7.0')
+        if not os.path.exists(version_file):
+            shutil.rmtree(cachedir)
+            os.mkdir(cachedir)
+            f = open(os.path.join(cachedir,"version.0.7.0"), 'w')
+            f.write("\n")
+            f.close()
         
     def __init__(self, script_url, handle, querystring):
         logging.debug("XBMC VERSION: %s" % (xbmc.getInfoLabel( "System.BuildVersion" ),))
@@ -424,6 +491,7 @@ class OnDemandPlugin(object):
             self.querystring = querystring
             self.args = {}
         self.connect_to_db()
+        self.check_cache()
         logging.debug("Constructed Plugin %s" % (self.__dict__,))
         
 if __name__ == '__main__':

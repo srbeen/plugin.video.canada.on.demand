@@ -1,3 +1,23 @@
+0.7.3 - fixed CityTV Crash
+
+0.7.2 - Fixed Tou.TV Regression, refactored channels further.
+
+0.7.1 - cache duration configurable
+
+0.7.0 - Overhaul caching backend
+
+0.6.10 - Added experimental Muchmusic Jukebox feature. 
+
+0.6.9 - Caching progress dialog added.
+
+0.6.8 - Fixed Caching bug in Aux.TV
+
+0.6.7 - Added bitrate auto-selection for brightcove channels
+
+0.6.6 - Added Aux.TV
+
+0.6.5 - Added TVO Kids.
+
 0.6.4 - Added Show Images to CityTV Channels and added "Shorts in the City" channel
 
 0.6.3 - Add plot and date to citytv full episodes

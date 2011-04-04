@@ -58,9 +58,10 @@ class ChannelException(Exception): pass
 class BaseChannel(object):
     """
     The Base of all Channel classes.
-
     
     """
+    
+    cache_timeout = 60*60*4
     short_name = None
     long_name = None
     icon_path = None
@@ -76,7 +77,8 @@ class BaseChannel(object):
     def __init__(self, plugin, **kwargs):
         self.plugin = plugin
         self.args = kwargs
-
+        self.cache_timeout = int(self.plugin.get_setting('default_cache_timeout'))
+        
     @classmethod
     def get_channel_entry_info(self):
         """

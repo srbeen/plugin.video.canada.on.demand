@@ -51,11 +51,19 @@ class URLParser(object):
         return scheme
         
     def clean_app(self, app):
+        if hasattr(self, 'additional_app'):
+            app = app + "/" + self.additional_app
+            
         if 'live' in app:
             self.is_live = True
         return app
     
     def clean_playpath(self, playpath):
+        if "&mp4" in playpath:
+            app, pp = playpath.split("&mp4")
+            playpath = 'mp4' + pp
+            self.additional_app = app
+            
         if playpath.startswith("&"):
             playpath = playpath[1:]
         basename, extension = os.path.splitext(playpath)
@@ -275,16 +283,7 @@ def get_page(url, retry_limit=4):
     fetch a url, damnit.
     
     """
-
-    retries = 0
-
-    while retries < retry_limit:
-        logging.debug("fetching %s" % (url,))
-        try:            
-            return urllib2.urlopen(url)
-        except (urllib2.HTTPError, urllib2.URLError), e:
-            retries += 1
-    raise CTVException("Failed to retrieve page: %s" %(url,))
+    raise Exception("DEPRECATED get_page call to %s" %(url,))
 
 
 def get_soup(url, *args, **kwargs):
