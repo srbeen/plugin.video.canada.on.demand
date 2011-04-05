@@ -3,6 +3,7 @@ import cgi
 import urllib, urllib2
 from BeautifulSoup import BeautifulSoup, BeautifulStoneSoup
 import re
+
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
@@ -118,7 +119,6 @@ class URLParser(object):
         if params:
             base_url += " %s" % (" ".join(["%s=%s" % item for item in params]))
         self.output_url = base_url
-    
         
 class TestParser(URLParser):
     def clean_netloc(self, netloc):
