@@ -57,9 +57,8 @@
 
 0.3.4 - Added new 'Maximum Bitrate' setting.
         instead of listing the same episode in multiple bitrates,
-	we will now only list the highest bitrate that is still lower
-	than the max_bitrate setting. default is 9999kbps
-	
+        we will now only list the highest bitrate that is still lower
+        than the max_bitrate setting. default is 9999kbps
 
 0.3.3 - Fixed crash(?)
 
@@ -87,8 +86,8 @@
 
 0.1.11 - Added a setting 'Automatically Play All Clips' which eliminates the 
          'clip-level' listing for all channels and attempts to play all clips 
-	 as a single playlist. The setting is disabled by default and will only 
-	 work with XBMC svn r32470+.	
+         as a single playlist. The setting is disabled by default and will only 
+         work with XBMC svn r32470+.	
 	 
 0.1.10 - Straightenend out the good/ugly/bad situation
 	 
@@ -115,8 +114,8 @@
       - added force-rtmp option
 
 0.1.1 - YTV, TreehousTV classes(ThePlatformBase) with improvements to backend:
-	- removed the StoneSoup processing of Canwest XML responses and migrated to common &format=SMIL parsing ;
-	- folded action_browse_episode into base ThePlatform class (easier for maintenance..)
+      - removed the StoneSoup processing of Canwest XML responses and migrated to common &format=SMIL parsing ;
+      - folded action_browse_episode into base ThePlatform class (easier for maintenance..)
 
 0.1.0 - major: theplatformbase suprclass, CBC fix
 
@@ -132,6 +131,3 @@
       - fixed cbc regression
       
 0.0.3 - added A bunch of new channels.
-
-
-      
