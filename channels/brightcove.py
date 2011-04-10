@@ -418,6 +418,7 @@ class TVOKids(BrightcoveBaseChannel):
             
             
 class TVO(BrightcoveBaseChannel):
+    in_development = True
     status = STATUS_BAD
     short_name = 'tvo'
     long_name = 'TVO'
@@ -720,6 +721,7 @@ class AUX(BrightcoveBaseChannel):
         
         
 class CanalVie(BrightcoveBaseChannel):
+    in_development = True
     status = STATUS_BAD
     short_name = 'canalvie'
     long_name = 'Canal Vie'

@@ -1,3 +1,5 @@
+0.7.4 - Added setting to hide 'In Development' channels.
+
 0.7.3 - fixed CityTV Crash
 
 0.7.2 - Fixed Tou.TV Regression, refactored channels further.

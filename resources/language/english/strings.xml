@@ -8,5 +8,5 @@
     <string id="30006">My librtmp is Awesome!</string>
     <string id="30007">Maximum # of clips to join</string>
     <string id="30008">Cache duration (seconds):</string>
-
+    <string id="30009">Show Development Channels (not recommended)</string>
 </strings>

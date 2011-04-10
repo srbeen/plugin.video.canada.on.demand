@@ -18,9 +18,9 @@ except:
     
 __plugin__ = "Canada On Demand"
 __author__ = 'Andre,Renaud  {andrepleblanc,renaudtrudel}@gmail.com'
-__url__ = 'http://github.com/andrepl/plugin.video.canada.on.demand/'
-__date__ = '04-03-2011'
-__version__ = '0.7.3'
+__url__ = 'http://xbmcaddons.com/addons/plugin.video.canada.on.demand/'
+__date__ = '04-10-2011'
+__version__ = '0.7.4'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
 
@@ -133,6 +133,9 @@ class OnDemandPlugin(object):
                 info['Thumb'] = self.get_resource_path('images','channels', info['Thumb'])
             except ChannelException:
                 logging.warn("Couldn't Find Channel Icon for %s" % (channel_code,))
+            
+            if channel_class.in_development and self.get_setting("show_dev_channels") == 'false': 
+                continue
             
             if self.get_setting('awesome_librtmp') == "true":
                 self.add_list_item(info)

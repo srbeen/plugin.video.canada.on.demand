@@ -60,7 +60,7 @@ class BaseChannel(object):
     The Base of all Channel classes.
     
     """
-    
+    in_development = False
     cache_timeout = 60*60*4
     short_name = None
     long_name = None
