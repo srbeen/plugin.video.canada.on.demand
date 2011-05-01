@@ -91,7 +91,6 @@ class OnDemandPlugin(object):
         cfname = os.path.join(cachepath, fname)
         if os.path.exists(cfname):
             ctime = os.path.getctime(cfname)
-            logging.debug("FILE_CTIME: %s" % (ctime,))
             if time.time() - ctime < max_age:
                 download = False
                 
@@ -252,7 +251,7 @@ class OnDemandPlugin(object):
         if context_menu_items:
             li.addContextMenuItems(context_menu_items, 
                                    replaceItems=clear_context_menu)
-            
+           
             
         # Handle the return-early case
         if not return_only:
