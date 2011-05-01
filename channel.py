@@ -1,5 +1,5 @@
 """
-Meta and Base Classes for basic Channel Support
+Meta and Base Classes for basic channel support
 
 """
 
