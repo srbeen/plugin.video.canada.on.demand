@@ -12,7 +12,6 @@ from channels import *
 from channel import *
 try:
     from sqlite3 import dbapi2 as sqlite
-    
 except:
     from pysqlite2 import dbapi2 as sqlite
     
@@ -476,7 +475,6 @@ class OnDemandPlugin(object):
             f.close()
         
     def __init__(self, script_url, handle, querystring):
-        logging.debug("XBMC VERSION: %s" % (xbmc.getInfoLabel( "System.BuildVersion" ),))
         proxy = self.get_setting("http_proxy")
         port = self.get_setting("http_proxy_port")
         if proxy and port:
