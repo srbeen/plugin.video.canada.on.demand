@@ -206,7 +206,7 @@ class ThePlatformBaseChannel(BaseChannel):
                 except ValueError:
                     base_url = decode_htmlentities(ref['src'])
                     playpath = None
-                    logging.debug('all other channels type of SMIL  base_url=%s  playpath=%s'%(base_url, playpath))
+                logging.debug('all other channels type of SMIL  base_url=%s  playpath=%s'%(base_url, playpath))
             elif ref['src'].startswith('rtmpe://') :
                 try:
                     base_url, playpath = decode_htmlentities(ref['src']).split('{break}', 1) #<break>
@@ -214,7 +214,7 @@ class ThePlatformBaseChannel(BaseChannel):
                 except ValueError:
                     base_url = decode_htmlentities(ref['src'])
                     playpath = None
-                    logging.debug("RTMPE? ref= %s, base_url = %s, playpath = %s" %(ref['src'], base_url, playpath))
+                logging.debug("RTMPE ref= %s, base_url = %s, playpath = %s" %(ref['src'], base_url, playpath))
             else:
                 if soup.meta['base'].startswith('rtmp://'): #CBC type of SMIL
                     base_url = decode_htmlentities(soup.meta['base'])
