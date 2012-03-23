@@ -204,6 +204,7 @@ class CTVLocalNews(CTVBaseChannel):
         ('Southwestern Ontario', 'swo.ctv.ca'),
         ('Toronto', 'toronto.ctv.ca'),
         ('Winnipeg', 'winnipeg.ctv.ca'),
+        ('Atlantic', 'atlantic.ctv.ca'),
     ]
 
         
